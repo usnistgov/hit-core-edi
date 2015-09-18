@@ -17,7 +17,6 @@ import gov.nist.hit.core.domain.IntegrationProfile;
 import gov.nist.hit.core.domain.ProfileModel;
 import gov.nist.hit.core.domain.TestCaseDocument;
 import gov.nist.hit.core.domain.TestContext;
-import gov.nist.hit.core.domain.TestDomain;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.edi.repo.EDITestContextRepository;
 import gov.nist.hit.core.service.ResourcebundleLoader;
@@ -36,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
   static final Logger logger = LoggerFactory.getLogger(EDIResourcebundleLoaderImpl.class);
+  static final String FORMAT = "edi";
 
   @Autowired
   EDITestContextRepository testContextRepository;
@@ -64,14 +64,14 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
 
   @Override
-  public EDITestContext testContext(String path, JsonNode domainObj) throws IOException {
+  public EDITestContext testContext(String path, JsonNode formatObj) throws IOException {
     // for backward compatibility
-    domainObj = domainObj.findValue("edi") != null ? domainObj.findValue("edi") : domainObj;
+    formatObj = formatObj.findValue(FORMAT) != null ? formatObj.findValue(FORMAT) : formatObj;
     EDITestContext testContext = new EDITestContext();
-    testContext.setDomain(TestDomain.EDI);
-    JsonNode messageId = domainObj.findValue("messageId");
-    JsonNode constraintId = domainObj.findValue("constraintId");
-    JsonNode valueSetLibraryId = domainObj.findValue("valueSetLibraryId");
+    testContext.setFormat(FORMAT);
+    JsonNode messageId = formatObj.findValue("messageId");
+    JsonNode constraintId = formatObj.findValue("constraintId");
+    JsonNode valueSetLibraryId = formatObj.findValue("valueSetLibraryId");
     if (valueSetLibraryId != null && !"".equals(valueSetLibraryId.getTextValue())) {
       testContext.setVocabularyLibrary((getVocabularyLibrary(valueSetLibraryId.getTextValue())));
     }
