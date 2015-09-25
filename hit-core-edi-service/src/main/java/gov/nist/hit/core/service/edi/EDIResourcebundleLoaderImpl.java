@@ -15,10 +15,14 @@ package gov.nist.hit.core.service.edi;
 import gov.nist.hit.core.domain.ConformanceProfile;
 import gov.nist.hit.core.domain.IntegrationProfile;
 import gov.nist.hit.core.domain.ProfileModel;
+import gov.nist.hit.core.domain.Stage;
 import gov.nist.hit.core.domain.TestCaseDocument;
 import gov.nist.hit.core.domain.TestContext;
+import gov.nist.hit.core.domain.VocabularyLibrary;
+import gov.nist.hit.core.edi.domain.EDITestCaseDocument;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.edi.repo.EDITestContextRepository;
+import gov.nist.hit.core.repo.VocabularyLibraryRepository;
 import gov.nist.hit.core.service.ResourcebundleLoader;
 import gov.nist.hit.core.service.ValueSetLibrarySerializer;
 import gov.nist.hit.core.service.exception.ProfileParserException;
@@ -27,10 +31,14 @@ import gov.nist.hit.core.service.util.FileUtil;
 
 import java.io.IOException;
 
+import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
@@ -40,6 +48,9 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
   @Autowired
   EDITestContextRepository testContextRepository;
 
+  @Autowired
+  VocabularyLibraryRepository vocabularyLibraryRepository;
+
   EDIProfileParser profileParser = new EDIProfileParserImpl();
   ValueSetLibrarySerializer valueSetLibrarySerializer = new ValueSetLibrarySerializerImpl();
 
@@ -48,8 +59,8 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
 
   @Override
-  public TestCaseDocument setTestContextDocument(TestContext c, TestCaseDocument doc)
-      throws IOException {
+  public TestCaseDocument generateTestCaseDocument(TestContext c) throws IOException {
+    EDITestCaseDocument doc = new EDITestCaseDocument();
     if (c != null) {
       EDITestContext context = testContextRepository.findOne(c.getId());
       doc.setExMsgPresent(context.getMessage() != null && context.getMessage().getContent() != null);
@@ -64,11 +75,13 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
 
   @Override
-  public EDITestContext testContext(String path, JsonNode formatObj) throws IOException {
+  public EDITestContext testContext(String path, JsonNode formatObj, Stage stage)
+      throws IOException {
     // for backward compatibility
     formatObj = formatObj.findValue(FORMAT) != null ? formatObj.findValue(FORMAT) : formatObj;
     EDITestContext testContext = new EDITestContext();
     testContext.setFormat(FORMAT);
+    testContext.setStage(stage);
     JsonNode messageId = formatObj.findValue("messageId");
     JsonNode constraintId = formatObj.findValue("constraintId");
     JsonNode valueSetLibraryId = formatObj.findValue("valueSetLibraryId");
@@ -102,15 +115,28 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
       }
     }
     return testContext;
-
   }
-
 
   @Override
   public ProfileModel parseProfile(String integrationProfileXml, String conformanceProfileId,
       String constraintsXml, String additionalConstraintsXml) throws ProfileParserException {
     return profileParser.parse(integrationProfileXml, conformanceProfileId, constraintsXml,
         additionalConstraintsXml);
+  }
+
+  @Override
+  protected VocabularyLibrary vocabLibrary(String content) throws JsonGenerationException,
+      JsonMappingException, IOException {
+    Document doc = this.stringToDom(content);
+    VocabularyLibrary vocabLibrary = new VocabularyLibrary();
+    Element valueSetLibraryeElement = (Element) doc.getElementsByTagName("ValueSetLibrary").item(0);
+    vocabLibrary.setSourceId(valueSetLibraryeElement.getAttribute("ValueSetLibraryIdentifier"));
+    vocabLibrary.setName(valueSetLibraryeElement.getAttribute("Name"));
+    vocabLibrary.setDescription(valueSetLibraryeElement.getAttribute("Description"));
+    vocabLibrary.setXml(content);
+    vocabLibrary.setJson(obm.writeValueAsString(valueSetLibrarySerializer.toObject(content)));
+    vocabularyLibraryRepository.save(vocabLibrary);
+    return vocabLibrary;
   }
 
 
