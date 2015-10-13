@@ -11,8 +11,6 @@
  */
 package gov.nist.hit.core.service.edi;
 
-import gov.nist.hit.core.domain.ProfileModel;
-import gov.nist.hit.core.service.exception.ProfileParserException;
 
 
 /**
@@ -23,21 +21,6 @@ import gov.nist.hit.core.service.exception.ProfileParserException;
 public class EDIProfileParserImpl extends EDIProfileParser {
 
   public EDIProfileParserImpl() {}
-
-  @Override
-  public ProfileModel parse(String integrationProfileXml, String conformanceProfileId,
-      String... constraints) throws ProfileParserException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public ProfileModel parse(Object conformanceProfile, String... constraints)
-      throws ProfileParserException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
 
 
 }

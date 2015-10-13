@@ -11,13 +11,26 @@
  */
 package gov.nist.hit.core.service.edi;
 
+import gov.nist.healthcare.unified.enums.Context;
+import gov.nist.healthcare.unified.model.EnhancedReport;
+import gov.nist.healthcare.unified.proxy.ValidationProxy;
 import gov.nist.hit.core.domain.MessageValidationCommand;
 import gov.nist.hit.core.domain.MessageValidationResult;
 import gov.nist.hit.core.domain.TestContext;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.service.MessageValidator;
+import gov.nist.hit.core.service.exception.MessageException;
 import gov.nist.hit.core.service.exception.MessageValidationException;
+import hl7.v2.validation.content.ConformanceContext;
+import hl7.v2.validation.content.DefaultConformanceContext;
+import hl7.v2.validation.vs.ValueSetLibrary;
+import hl7.v2.validation.vs.ValueSetLibraryImpl;
 
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.io.IOUtils;
 
 
 public abstract class EDIMessageValidator implements MessageValidator {
@@ -27,10 +40,37 @@ public abstract class EDIMessageValidator implements MessageValidator {
       throws MessageValidationException {
     try {
       if (testContext instanceof EDITestContext) {
-        return new MessageValidationResult("", "");
+        EDITestContext ediTestContext = (EDITestContext) testContext;
+        String title = command.getName();
+        String contextType = command.getContextType();
+        String message = getMessageContent(command);
+        String conformanceProfielId = ediTestContext.getConformanceProfile().getSourceId();
+        String integrationProfileXml =
+            ediTestContext.getConformanceProfile().getIntegrationProfile().getXml();
+        String valueSets = ediTestContext.getVocabularyLibrary().getXml();
+        String c1 = ediTestContext.getConstraints().getXml();
+        String c2 =
+            ediTestContext.getAddditionalConstraints() != null ? ediTestContext
+                .getAddditionalConstraints().getXml() : null;
+        InputStream c1Stream = c1 != null ? IOUtils.toInputStream(c1) : null;
+        InputStream c2Stream = c2 != null ? IOUtils.toInputStream(c2) : null;
+        List<InputStream> cStreams = new ArrayList<InputStream>();
+        if (c1Stream != null)
+          cStreams.add(c1Stream);
+        if (c2Stream != null)
+          cStreams.add(c2Stream);
+        ConformanceContext c = getConformanceContext(cStreams);
+        ValueSetLibrary vsLib =
+            valueSets != null ? getValueSetLibrary(IOUtils.toInputStream(valueSets)) : null;
+        ValidationProxy vp = new ValidationProxy(title, "NIST", "1.0");
+        EnhancedReport report =
+            vp.validate(message, integrationProfileXml, c, vsLib, conformanceProfielId,
+                Context.valueOf(contextType));
+        return new MessageValidationResult(report.to("json").toString(), report.render("iz-report",
+            null));
       } else {
         throw new MessageValidationException(
-            "Invalid Context Provided. Expected Context is HL7V2TestContext but found "
+            "Invalid Context Provided. Expected Context is EDITestContext but found "
                 + testContext.getClass().getSimpleName());
       }
     } catch (RuntimeException e) {
@@ -40,6 +80,24 @@ public abstract class EDIMessageValidator implements MessageValidator {
     }
   }
 
+  protected ConformanceContext getConformanceContext(List<InputStream> confContexts) {
+    ConformanceContext c = DefaultConformanceContext.apply(confContexts).get();
+    return c;
+  }
+
+  protected ValueSetLibrary getValueSetLibrary(InputStream vsLibXML) {
+    ValueSetLibrary valueSetLibrary = ValueSetLibraryImpl.apply(vsLibXML).get();
+    return valueSetLibrary;
+  }
+
+
+  public static String getMessageContent(MessageValidationCommand command) throws MessageException {
+    String message = command.getContent();
+    if (message == null) {
+      throw new MessageException("No message provided");
+    }
+    return message;
+  }
 
 
 }
