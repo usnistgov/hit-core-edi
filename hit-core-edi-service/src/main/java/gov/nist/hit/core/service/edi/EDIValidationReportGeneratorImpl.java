@@ -17,7 +17,7 @@ package gov.nist.hit.core.service.edi;
  * @author Harold Affo (NIST)
  */
 
-public abstract class EDIValidationReportGeneratorImpl extends EDIValidationReportGenerator {
+public class EDIValidationReportGeneratorImpl extends EDIValidationReportGenerator {
 
 
 }
