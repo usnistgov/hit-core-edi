@@ -12,6 +12,7 @@
 
 package gov.nist.hit.core.api.edi;
 
+import gov.nist.hit.core.domain.MessageModel;
 import gov.nist.hit.core.domain.MessageParserCommand;
 import gov.nist.hit.core.domain.MessageValidationCommand;
 import gov.nist.hit.core.domain.MessageValidationResult;
@@ -66,12 +67,12 @@ public class EDITestContextController {
   }
 
   @RequestMapping(value = "/{testContextId}/parseMessage", method = RequestMethod.POST)
-  public List<gov.nist.hit.core.domain.MessageElement> parse(
+  public MessageModel parse(
       @PathVariable final Long testContextId, @RequestBody final MessageParserCommand command)
       throws MessageParserException {
     logger.info("Parsing message");
     EDITestContext testContext = testContext(testContextId);
-    return messageParser.parse(testContext, command).getElements();
+    return messageParser.parse(testContext, command);
   }
 
   @RequestMapping(value = "/{testContextId}/validateMessage", method = RequestMethod.POST)
