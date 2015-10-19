@@ -29,6 +29,7 @@ import hl7.v2.instance.Location;
 import hl7.v2.instance.Message;
 import hl7.v2.instance.SegOrGroup;
 import hl7.v2.instance.Segment;
+import hl7.v2.instance.Separators;
 import hl7.v2.instance.SimpleComponent;
 import hl7.v2.instance.SimpleField;
 import hl7.v2.profile.Profile;
@@ -37,6 +38,7 @@ import hl7.v2.profile.Req;
 import ncpdp.script.profile.XMLDeserializer;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,6 +62,16 @@ public abstract class EDIMessageParser implements MessageParser {
   private final static String NODE_FIELD = "field";
   private final static String NODE_COMPONENT = "component";
   private final static String NODE_SUB_COMPONENT = "subcomponent";
+
+  private final static String FIELD_SEPERATOR = "field_separator";
+  private final static String COMPONENT_SEPERATOR = "component_separator";
+  private final static String REPETITION_SEPERATOR = "repetition_separator";
+  private final static String SUBCOMPONENT_SEPERATOR = "subcomponent_separator";
+  private final static String CONTINUATION_SEPERATOR = "continuation_separator";
+  private final static String SEGMENT_SEPERATOR = "segment_separator";
+  private final static String OTHER_SEPERATOR = "other_separator";
+  private final static String ESCAPE_SEPERATOR = "escape_separator";
+  private final static String DECIMAL_SEPERATOR = "decimal_separator";
 
   /** 
    *  
@@ -111,9 +123,44 @@ public abstract class EDIMessageParser implements MessageParser {
         process(it.next(), "", root);
       }
     }
-    return new MessageModel(root.getChildren(), getDelimeters(ediMessage));
+    return new MessageModel(root.getChildren(), getDelimeters(message.separators()));
   }
 
+  private Map<String, String> getDelimeters(Separators separators) {
+    Map<String, String> map = new HashMap<String, String>();
+    java.util.List<Object> list = new ArrayList<Object>();
+    scala.collection.Iterator<Object> it = separators.toList().iterator();
+    while (it.hasNext()) {
+      list.add(it.next());
+    }
+
+    System.out.println("separators: "+list.toString());
+    // [:, +, ., /, *, '] 
+
+    if (list.size() >= 6) {
+      map.put(FIELD_SEPERATOR, list.get(1).toString());
+      map.put(COMPONENT_SEPERATOR, list.get(0).toString());
+      map.put(REPETITION_SEPERATOR, list.get(4).toString());
+      map.put(CONTINUATION_SEPERATOR, "");
+      map.put(SUBCOMPONENT_SEPERATOR, "");
+      map.put(DECIMAL_SEPERATOR, list.get(2).toString());
+      map.put(ESCAPE_SEPERATOR, list.get(3).toString());
+      map.put(SEGMENT_SEPERATOR, list.get(5).toString());
+    } else {
+      map.put(FIELD_SEPERATOR, "+");
+      map.put(COMPONENT_SEPERATOR, ":");
+      map.put(REPETITION_SEPERATOR, "*");
+      map.put(CONTINUATION_SEPERATOR, "");
+      map.put(SUBCOMPONENT_SEPERATOR, "");
+      map.put(DECIMAL_SEPERATOR, ".");
+      map.put(ESCAPE_SEPERATOR, "/");
+      map.put(SEGMENT_SEPERATOR, "'");
+    }
+
+    return map;
+  }
+
+/*
   private Map<String, String> getDelimeters(String message) {
     // String dString = "^~&";
     Map<String, String> map = new HashMap<String, String>();
@@ -123,6 +170,7 @@ public abstract class EDIMessageParser implements MessageParser {
     map.put("segment", "'");
     return map;
   }
+*/
 
   /**
    * 

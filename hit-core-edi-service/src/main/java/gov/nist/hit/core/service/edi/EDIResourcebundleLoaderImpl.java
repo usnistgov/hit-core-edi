@@ -15,9 +15,9 @@ package gov.nist.hit.core.service.edi;
 import gov.nist.hit.core.domain.ConformanceProfile;
 import gov.nist.hit.core.domain.IntegrationProfile;
 import gov.nist.hit.core.domain.ProfileModel;
-import gov.nist.hit.core.domain.Stage;
 import gov.nist.hit.core.domain.TestCaseDocument;
 import gov.nist.hit.core.domain.TestContext;
+import gov.nist.hit.core.domain.TestingStage;
 import gov.nist.hit.core.domain.VocabularyLibrary;
 import gov.nist.hit.core.edi.domain.EDITestCaseDocument;
 import gov.nist.hit.core.edi.domain.EDITestContext;
@@ -75,12 +75,13 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
 
   @Override
-  public TestContext testContext(String path, JsonNode formatObj, Stage stage)
+  public TestContext testContext(String path, JsonNode formatObj, TestingStage stage)
       throws IOException {
     // for backward compatibility
         if (formatObj.findValue(FORMAT) == null){
           return null;
         } else {
+          logger.debug("processing edi testContext");
       formatObj = formatObj.findValue(FORMAT);
       EDITestContext testContext = new EDITestContext();
       testContext.setFormat(FORMAT);
