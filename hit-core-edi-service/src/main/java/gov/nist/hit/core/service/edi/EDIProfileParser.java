@@ -90,9 +90,7 @@ public abstract class EDIProfileParser extends ProfileParser {
         p = cachedIntegrationProfilesMap.get(integrationProfileId);
       } else {
         InputStream profileStream = IOUtils.toInputStream(integrationProfileXml);
-        System.out.println("ppi 1");
         p = XMLDeserializer.deserialize(profileStream).get();
-        System.out.println("ppi 2");
         cachedIntegrationProfilesMap.put(integrationProfileId, p);
       }
       Message m = p.messages().apply(conformanceProfileId);

@@ -44,6 +44,8 @@ import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.collection.Iterator;
 import scala.collection.immutable.List;
 
@@ -53,6 +55,8 @@ import scala.collection.immutable.List;
  * 
  */
 public abstract class EDIMessageParser implements MessageParser {
+
+  static final Logger logger = LoggerFactory.getLogger(EDIMessageParser.class);
 
   private final static String SEGMENT = "SEGMENT";
   private final static String FIELD = "FIELD";
@@ -134,10 +138,11 @@ public abstract class EDIMessageParser implements MessageParser {
       list.add(it.next());
     }
 
-    System.out.println("separators: "+list.toString());
+    logger.info("parsed separators: " + list.toString());
     // [:, +, ., /, *, '] 
 
     if (list.size() >= 6) {
+      logger.info("list >= 6");
       map.put(FIELD_SEPERATOR, list.get(1).toString());
       map.put(COMPONENT_SEPERATOR, list.get(0).toString());
       map.put(REPETITION_SEPERATOR, list.get(4).toString());
@@ -147,6 +152,7 @@ public abstract class EDIMessageParser implements MessageParser {
       map.put(ESCAPE_SEPERATOR, list.get(3).toString());
       map.put(SEGMENT_SEPERATOR, list.get(5).toString());
     } else {
+      logger.info("list < 6");
       map.put(FIELD_SEPERATOR, "+");
       map.put(COMPONENT_SEPERATOR, ":");
       map.put(REPETITION_SEPERATOR, "*");
