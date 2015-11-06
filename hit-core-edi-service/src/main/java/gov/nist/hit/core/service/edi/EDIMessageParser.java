@@ -139,18 +139,18 @@ public abstract class EDIMessageParser implements MessageParser {
     }
 
     logger.info("parsed separators: " + list.toString());
-    // [:, +, ., /, *, '] 
+    // [+, :, *, /, º, ., ']
 
     if (list.size() >= 6) {
       logger.info("list >= 6");
-      map.put(FIELD_SEPERATOR, list.get(1).toString());
-      map.put(COMPONENT_SEPERATOR, list.get(0).toString());
-      map.put(REPETITION_SEPERATOR, list.get(4).toString());
+      map.put(FIELD_SEPERATOR, list.get(0).toString());
+      map.put(COMPONENT_SEPERATOR, list.get(1).toString());
+      map.put(REPETITION_SEPERATOR, list.get(2).toString());
       map.put(CONTINUATION_SEPERATOR, "");
       map.put(SUBCOMPONENT_SEPERATOR, "");
-      map.put(DECIMAL_SEPERATOR, list.get(2).toString());
+      map.put(DECIMAL_SEPERATOR, list.get(5).toString());
       map.put(ESCAPE_SEPERATOR, list.get(3).toString());
-      map.put(SEGMENT_SEPERATOR, list.get(5).toString());
+      map.put(SEGMENT_SEPERATOR, list.get(6).toString());
     } else {
       logger.info("list < 6");
       map.put(FIELD_SEPERATOR, "+");

@@ -52,6 +52,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -67,6 +69,8 @@ import scala.collection.immutable.List;
  * 
  */
 public abstract class EDIProfileParser extends ProfileParser {
+
+  Logger logger = LoggerFactory.getLogger(EDIProfileParser.class);
 
   public EDIProfileParser() {}
 
@@ -584,11 +588,14 @@ public abstract class EDIProfileParser extends ProfileParser {
 
       children = rootChildElement.getElementsByTagName("ByName");
       if (children != null && children.getLength() > 0) {
+        logger.info("found constraints ByName");
         for (int i = 0; i < children.getLength(); i++) {
           Element child = (Element) children.item(i);
           String name = child.getAttribute("Name");
+          logger.info("found constraint name -> "+name);
           ProfileElement element = findElementByName(name, map);
           if (element != null) {
+            logger.info("found element");
             NodeList predicatesNodes = child.getElementsByTagName("Constraint");
             if (predicatesNodes != null && predicatesNodes.getLength() > 0) {
               for (int j = 0; j < predicatesNodes.getLength(); j++) {
@@ -647,8 +654,10 @@ public abstract class EDIProfileParser extends ProfileParser {
       if (!positions.isEmpty()) {
         return findElement(positions, child1);
       }
+      logger.info("found element child1 -> "+child1.getName());
       return child1;
     }
+    logger.info("didn't find element");
     return null;
   }
 
@@ -666,6 +675,7 @@ public abstract class EDIProfileParser extends ProfileParser {
 
   private ProfileElement findElementByTarget(String target, ProfileElement element) {
     if (target != null && !"".equals(target)) {
+      logger.info("findElementByTarget target -> "+target);
       java.util.List<Integer> positions = positions(target);
       ProfileElement found = findElement(positions, element);
       return found;
@@ -689,7 +699,9 @@ public abstract class EDIProfileParser extends ProfileParser {
 
 
   private ProfileElement findElementByName(String name, Map<String, ProfileElement> map) {
+    logger.info("findElementByName name -> "+name+" map -> "+map.values());
     for (ProfileElement child : map.values()) {
+      logger.info("profile element name -> "+child.getName());
       if (name.equals(child.getName())) {
         return child;
       }
