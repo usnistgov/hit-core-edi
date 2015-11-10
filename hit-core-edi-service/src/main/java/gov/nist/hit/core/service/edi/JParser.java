@@ -27,5 +27,9 @@ public class JParser implements DefaultNCPDPParser {
     return parse(message, model).get();
   }
 
+  public String findId(String s1, String s2, int n){
+    return "";
+  }
+
     
 }
