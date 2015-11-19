@@ -188,13 +188,13 @@ public abstract class EDIMessageParser implements MessageParser {
     Req req = c.req();
     MessageElementData data =
         new MessageElementData(loc.uidPath(), loc.desc(), req.usage().toString(), -1, null,
-            loc.line(), loc.column(), -1, c.position(), c.instance(), null, COMPONENT);
+            loc.line(), loc.column()-1, -1, c.position(), c.instance(), null, COMPONENT);
     MessageElement el = new MessageElement(NODE_COMPONENT, data, parent);
     if (c instanceof SimpleComponent) {
       SimpleComponent s = (SimpleComponent) c;
       MessageElementData value =
           new MessageElementData(loc.uidPath(), loc.desc(), req.usage().toString(), -1, null,
-              loc.line(), loc.column(), -1, s.position(), c.instance(), s.value().raw(), COMPONENT);
+              loc.line(), loc.column()-1, -1, s.position(), c.instance(), s.value().raw(), COMPONENT);
       new MessageElement("value", value, el);
     } else {
       ComplexComponent cc = (ComplexComponent) c;
@@ -218,11 +218,11 @@ public abstract class EDIMessageParser implements MessageParser {
     Req req = s.req();
     MessageElementData data =
         new MessageElementData(loc.uidPath(), loc.desc(), req.usage().toString(), -1, null,
-            loc.line(), loc.column(), -1, s.position(), s.instance(), null, SUB_COMPONENT);
+            loc.line(), loc.column()-1, -1, s.position(), s.instance(), null, SUB_COMPONENT);
     MessageElement el = new MessageElement(NODE_SUB_COMPONENT, data, parent);
     MessageElementData value =
         new MessageElementData(loc.uidPath(), loc.desc(), req.usage().toString(), -1, null,
-            loc.line(), loc.column(), -1, s.position(), s.instance(), s.value().raw(),
+            loc.line(), loc.column()-1, -1, s.position(), s.instance(), s.value().raw(),
             SUB_COMPONENT);
     new MessageElement("value", value, el);
   }
@@ -239,14 +239,14 @@ public abstract class EDIMessageParser implements MessageParser {
     String rep = f.toString();
     MessageElementData data =
         new MessageElementData(loc.uidPath(), loc.desc(), req.usage().toString(), card.min(),
-            card.max(), loc.line(), loc.column(), -1, f.position(), f.instance(), null, FIELD);
+            card.max(), loc.line(), loc.column()-1, -1, f.position(), f.instance(), null, FIELD);
 
     MessageElement el = new MessageElement(NODE_FIELD, data, parent);
     if (f instanceof SimpleField) {
       SimpleField s = (SimpleField) f;
       MessageElementData value =
           new MessageElementData(loc.uidPath(), loc.desc(), req.usage().toString(), card.min(),
-              card.max(), loc.line(), loc.column(), -1, f.position(), f.instance(),
+              card.max(), loc.line(), loc.column()-1, -1, f.position(), f.instance(),
               s.value().raw(), FIELD);
       new MessageElement("value", value, el);
     } else {
@@ -279,7 +279,7 @@ public abstract class EDIMessageParser implements MessageParser {
       Range card = Util.getOption(req.cardinality());
       MessageElementData data =
           new MessageElementData(loc.uidPath(), loc.desc(), req.usage().toString(), card.min(),
-              card.max(), loc.line(), loc.column(), -1, s.position(), s.instance(), null, SEGMENT);
+              card.max(), loc.line(), loc.column()-1, -1, s.position(), s.instance(), null, SEGMENT);
       MessageElement el = new MessageElement(NODE_SEGMENT, data, parent);
       List<Field> children = s.children();
       if (children != null && !children.isEmpty()) {
