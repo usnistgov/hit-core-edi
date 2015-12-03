@@ -12,12 +12,6 @@ public class EDIMessageValidatorImpl extends EDIMessageValidator {
   @Override
   public MessageValidationResult validate(TestContext testContext, MessageValidationCommand command)
       throws MessageValidationException {
-    try {
-     return  super.validate(testContext, command);
-    } catch (RuntimeException e) {
-      throw new MessageValidationException(e);
-    } catch (Exception e) {
-      throw new MessageValidationException(e);
-    }
+    return  super.validate(testContext, command);
   }
 }

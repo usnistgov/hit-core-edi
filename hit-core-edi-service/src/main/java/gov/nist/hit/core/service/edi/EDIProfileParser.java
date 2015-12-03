@@ -13,51 +13,13 @@ package gov.nist.hit.core.service.edi;
 
 import gov.nist.hit.core.domain.ProfileElement;
 import gov.nist.hit.core.domain.ProfileModel;
-import gov.nist.hit.core.domain.constraints.ByID;
-import gov.nist.hit.core.domain.constraints.ByName;
-import gov.nist.hit.core.domain.constraints.ByNameOrByID;
-import gov.nist.hit.core.domain.constraints.ConformanceStatement;
-import gov.nist.hit.core.domain.constraints.Constraints;
-import gov.nist.hit.core.domain.constraints.Context;
-import gov.nist.hit.core.domain.constraints.Predicate;
+import gov.nist.hit.core.domain.constraints.*;
 import gov.nist.hit.core.edi.domain.util.Util;
 import gov.nist.hit.core.service.ProfileParser;
 import gov.nist.hit.core.service.exception.ProfileParserException;
 import gov.nist.hit.core.service.impl.ConstraintsParserImpl;
-import hl7.v2.profile.Component;
-import hl7.v2.profile.Composite;
-import hl7.v2.profile.Datatype;
-import hl7.v2.profile.DynMapping;
-import hl7.v2.profile.Field;
-import hl7.v2.profile.Group;
-import hl7.v2.profile.Message;
-import hl7.v2.profile.Profile;
-import hl7.v2.profile.Range;
-import hl7.v2.profile.Req;
-import hl7.v2.profile.SegRefOrGroup;
-import hl7.v2.profile.Segment;
-import hl7.v2.profile.SegmentRef;
-import hl7.v2.profile.Usage;
-import hl7.v2.profile.ValueSetSpec;
-import hl7.v2.profile.XMLDeserializer;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.regex.Pattern;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
-
+import hl7.v2.profile.*;
+import ncpdp.script.profile.XMLDeserializer;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,9 +27,18 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-
 import scala.collection.Iterator;
 import scala.collection.immutable.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * 
@@ -108,7 +79,7 @@ public abstract class EDIProfileParser extends ProfileParser {
       Message m = p.messages().apply(conformanceProfileId);
       return parse(m, constraints);
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.info("ERROR",e);
       throw new ProfileParserException(e.getMessage());
     }
   }
@@ -133,13 +104,20 @@ public abstract class EDIProfileParser extends ProfileParser {
                 + Message.class.getCanonicalName());
       }
       String c1Xml = constraints != null && constraints.length > 0 ? constraints[0] : null;
+      logger.info("c1Xml "+c1Xml);
       String c2Xml = constraints != null && constraints.length > 1 ? constraints[1] : null;
+      logger.info("c2Xml "+c2Xml);
       Message m = (Message) conformanceProfile;
 
       this.segmentsMap = new LinkedHashMap<String, ProfileElement>();
       this.datatypesMap = new LinkedHashMap<String, ProfileElement>();
 
       model = new ProfileModel();
+      ProfileElement message = new ProfileElement("FULL");
+      message.setType(TYPE_MESSAGE);
+      message.setRelevent(true);
+      message.setId(m.id());
+      model.setMessage(message);
       this.conformanceStatements = constraintsParser.confStatements(c1Xml);
       this.predicates = constraintsParser.predicates(c1Xml);
       if (c2Xml != null) {
@@ -153,10 +131,21 @@ public abstract class EDIProfileParser extends ProfileParser {
         }
       }
 
-      ProfileElement message = new ProfileElement("FULL");
-      message.setType(TYPE_MESSAGE);
-      message.setRelevent(true);
-      message.setId(m.id());
+      // message.setConformanceStatements(this.findConformanceStatements(this.conformanceStatements
+      // .getGroups(), model.getMessage().getId(), model.getMessage().getName()));
+      // message.setPredicates(this.findPredicates(this.predicates.getGroups(), model.getMessage()
+      // .getId(), model.getMessage().getName()));
+      logger.info("conformanceStatements.getMessages()"+this.conformanceStatements.getMessages());
+      logger.info("model.getMessage().getId()"+model.getMessage().getId());
+      logger.info("model.getMessage().getName()"+model.getMessage().getName());
+
+      message.setConformanceStatements(this.findConformanceStatements(this.conformanceStatements
+              .getMessages(), model.getMessage().getId(), model.getMessage().getName()));
+      if (this.predicates != null){
+        message.setPredicates(this.findPredicates(this.predicates.getMessages(), model.getMessage()
+                .getId(), model.getMessage().getName()));
+      }
+
       scala.collection.immutable.List<SegRefOrGroup> children = m.structure();
       if (children != null && !children.isEmpty()) {
         Iterator<SegRefOrGroup> it = children.iterator();
@@ -164,7 +153,6 @@ public abstract class EDIProfileParser extends ProfileParser {
           process(it.next(), message);
         }
       }
-      model.setMessage(message);
       model.setDatatypes(this.datatypesMap);
       model.setSegments(this.segmentsMap);
 
@@ -213,6 +201,15 @@ public abstract class EDIProfileParser extends ProfileParser {
     if (c2.getGroups() != null) {
       c1.getGroups().getByNameOrByIDs().addAll(c2.getGroups().getByNameOrByIDs());
     }
+
+    if (c1.getMessages() == null) {
+      c1.setMessages(new Context());
+    }
+
+    if (c2.getMessages() != null) {
+      c1.getMessages().getByNameOrByIDs().addAll(c2.getMessages().getByNameOrByIDs());
+    }
+
 
     return c1;
   }
@@ -263,6 +260,23 @@ public abstract class EDIProfileParser extends ProfileParser {
     element.setRef(segmentElement.getId());
     // element.setChildren(segmentElement.getChildren());
     element.setPath(segmentElement.getName());
+
+    element.setPredicates(new ArrayList<Predicate>());
+    element.setConformanceStatements(new ArrayList<ConformanceStatement>());
+    String targetPath = getTargetPath(element);
+    if (!targetPath.equals("")) {
+      for (ConformanceStatement cs : this.model.getMessage().getConformanceStatements()) {
+        if (cs.getConstraintTarget().equals(targetPath)) {
+          element.getConformanceStatements().add(cs);
+        }
+      }
+
+      for (Predicate p : this.model.getMessage().getPredicates()) {
+        if (p.getConstraintTarget().equals(targetPath)) {
+          element.getPredicates().add(p);
+        }
+      }
+    }
     parentElement.getChildren().add(element);
     return element;
   }
@@ -302,7 +316,7 @@ public abstract class EDIProfileParser extends ProfileParser {
     element.setId(s.id());
     element.setDynamicMaps(dynaMap(s));
     element.setPredicates(this.findPredicates(this.predicates.getSegments(), s.id(), s.name()));
-    element.setConformanceStatements(this.findConformanceStatement(
+    element.setConformanceStatements(this.findConformanceStatements(
             this.conformanceStatements.getSegments(), s.id(), s.name()));
 
     scala.collection.immutable.List<Field> children = s.fields();
@@ -361,8 +375,23 @@ public abstract class EDIProfileParser extends ProfileParser {
     element.setPosition(req.position() + "");
     element.setId(g.id());
     element.setPredicates(this.findPredicates(this.predicates.getGroups(), g.id(), g.name()));
-    element.setConformanceStatements(this.findConformanceStatement(
+    element.setConformanceStatements(this.findConformanceStatements(
             this.conformanceStatements.getGroups(), g.id(), g.name()));
+
+    String targetPath = getTargetPath(element);
+    if (!targetPath.equals("")) {
+      for (ConformanceStatement cs : this.model.getMessage().getConformanceStatements()) {
+        if (cs.getConstraintTarget().equals(targetPath)) {
+          element.getConformanceStatements().add(cs);
+        }
+      }
+
+      for (Predicate p : this.model.getMessage().getPredicates()) {
+        if (p.getConstraintTarget().equals(targetPath)) {
+          element.getPredicates().add(p);
+        }
+      }
+    }
 
     parentElement.getChildren().add(element);
     scala.collection.immutable.List<SegRefOrGroup> children = g.structure();
@@ -373,6 +402,15 @@ public abstract class EDIProfileParser extends ProfileParser {
       }
     }
     return element;
+  }
+
+
+  private String getTargetPath(ProfileElement element) {
+    if (element == null || element.getType().equals(TYPE_MESSAGE))
+      return "";
+    String pTarget = getTargetPath(element.getParent());
+    return pTarget.equals("") ? element.getPosition() + "[1]" : pTarget + "."
+            + element.getPosition() + "[1]";
   }
 
   /**
@@ -405,82 +443,6 @@ public abstract class EDIProfileParser extends ProfileParser {
     return element;
   }
 
-  // /**
-  // * Fix icons and types of component and subcomponents
-  // *
-  // * @throws CloneNotSupportedException
-  // */
-  // private void updateTypes() throws CloneNotSupportedException {
-  // Collection<ProfileElement> elements = messagesMap.values();
-  // java.util.Iterator<ProfileElement> it = elements.iterator();
-  // while (it.hasNext()) {
-  // updateTypes(it.next());
-  // }
-  // elements = segmentsMap.values();
-  // it = elements.iterator();
-  // while (it.hasNext()) {
-  // updateTypes(it.next());
-  // }
-  // }
-
-  // private void addVariesChildren() throws CloneNotSupportedException {
-  //
-  // Collection<ProfileElement> elements = messagesMap.values();
-  // java.util.Iterator<ProfileElement> it = elements.iterator();
-  // while (it.hasNext()) {
-  // addVariesChildren(it.next());
-  // }
-  // }
-
-
-  // /**
-  // * Load the registry for easy search in the message
-  // *
-  // * @throws CloneNotSupportedException
-  // */
-  // private void registerAll() {
-  // registry = new HashMap<String, ProfileElement>();
-  // Collection<ProfileElement> messages = messagesMap.values();
-  // java.util.Iterator<ProfileElement> it = messages.iterator();
-  // while (it.hasNext()) {
-  // register(it.next());
-  // }
-  // }
-  //
-  // private void register(ProfileElement element) {
-  // registry.put(element.getId(), element);
-  // for (ProfileElement child : element.getChildren()) {
-  // register(child);
-  // }
-  // }
-  //
-  //
-  // private void updateTypes(ProfileElement parent) throws CloneNotSupportedException {
-  // // ArrayList<ProfileElement> newChildren = new ArrayList<ProfileElement>();
-  // java.util.List<ProfileElement> children = parent.getChildren();
-  // if (children != null && !children.isEmpty()) {
-  // for (int i = 0; i < children.size(); i++) {
-  // ProfileElement child = children.get(i);
-  // if (parent.getType().equals(TYPE_SEGMENT_REF)) {
-  // child.setPath(parent.getPath() + "." + child.getPosition());
-  // updateTypes(child);
-  // } else if (parent.getType().equals(TYPE_FIELD)) {
-  // if (!child.getType().equals(TYPE_DATATYPE)) {
-  // child.setType(TYPE_COMPONENT);
-  // child.setPath(parent.getPath() + "." + child.getPosition());
-  // updateTypes(child);
-  // }
-  // } else if (parent.getType().equals(TYPE_COMPONENT)
-  // || parent.getType().equals(TYPE_SUBCOMPONENT)) {
-  // child.setType(TYPE_SUBCOMPONENT);
-  // // child.setIcon(ICON_SUBCOMPONENT);
-  // child.setPath(parent.getPath() + "." + child.getPosition());
-  // updateTypes(child);
-  // }
-  // }
-  // }
-  // }
-
   /**
    *
    * @param f
@@ -511,50 +473,6 @@ public abstract class EDIProfileParser extends ProfileParser {
     // element.setChildren(ProfileElement.clone(datatypeElement.getChildren()));
   }
 
-
-  // private void addVariesChildren(ProfileElement element) throws CloneNotSupportedException {
-  // if (element.getType().equals(TYPE_GROUP)) {
-  // java.util.Iterator<ProfileElement> it = element.getChildren().iterator();
-  // while (it.hasNext()) {
-  // addVariesChildren(it.next());
-  // }
-  // } else if (element.getType().equals(TYPE_SEGMENT_REF)) {
-  // ProfileElement segmentElement = registry.get(element.getRef());
-  // addVariesChildren(segmentElement);
-  // element.setChildren(ProfileElement.clone(segmentElement.getChildren()));
-  // } else {
-  // if (element.getType().equals(TYPE_SEGMENT) && element.getDynamicMaps() != null
-  // && !element.getDynamicMaps().isEmpty()) {
-  // Map<Integer, Set<String>> dynamicMappings = element.getDynamicMaps();
-  // java.util.List<ProfileElement> children = element.getChildren();
-  // java.util.Iterator<ProfileElement> it = children.iterator();
-  // while (it.hasNext()) {
-  // ProfileElement f = it.next();
-  // ArrayList<ProfileElement> datatypes = new ArrayList<ProfileElement>();
-  // Set<String> mappings = dynamicMappings.get(f.getPosition());
-  // if (mappings != null && !mappings.isEmpty()) {
-  // java.util.Iterator<String> mIt = mappings.iterator();
-  // while (mIt.hasNext()) {
-  // String id = mIt.next();
-  // ProfileElement dt = findDatatype(id);
-  // if (dt == null)
-  // throw new RuntimeException("Datatype " + id + "not found");
-  // datatypes.add(dt);
-  // }
-  // Collections.sort(datatypes, new Comparator<ProfileElement>() {
-  // @Override
-  // public int compare(ProfileElement o1, ProfileElement o2) {
-  // // TODO Auto-generated method stub
-  // return o1.getName().compareTo(o2.getName());
-  // }
-  // });
-  // f.setChildren(datatypes);
-  // }
-  // }
-  // }
-  // }
-  // }
-
   private String table(Req req) {
     List<ValueSetSpec> vsSpec = req.vsSpec();
     if (vsSpec != null && !vsSpec.isEmpty()) {
@@ -579,7 +497,7 @@ public abstract class EDIProfileParser extends ProfileParser {
       // element.setIcon(ICON_DATATYPE);
       element.setRelevent(true);
       element.setPredicates(this.findPredicates(this.predicates.getDatatypes(), d.id(), d.name()));
-      element.setConformanceStatements(this.findConformanceStatement(
+      element.setConformanceStatements(this.findConformanceStatements(
               this.conformanceStatements.getDatatypes(), d.id(), d.name()));
       datatypesMap.put(d.id(), element);
       if (d instanceof Composite) {
@@ -598,11 +516,6 @@ public abstract class EDIProfileParser extends ProfileParser {
       return datatypesMap.get(d.id());
     }
 
-  }
-
-
-  private ProfileElement findDatatype(String id) {
-    return datatypesMap.get(id);
   }
 
   private ProfileElement process(Component c, ProfileElement parent)
@@ -627,8 +540,6 @@ public abstract class EDIProfileParser extends ProfileParser {
     element.setChildren(ProfileElement.clone(datatypeElement.getChildren()));
     return element;
   }
-
-
 
   private Document toDoc(String xmlSource) {
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -655,211 +566,6 @@ public abstract class EDIProfileParser extends ProfileParser {
             (Element) doc.getElementsByTagName("ConformanceProfile").item(0);
     return elmIntegrationProfile.getAttribute("ID");
   }
-
-
-  // private Predicate predicate(Element element) {
-  // String id = element.getAttribute("ID");
-  // String trueUsage = element.getAttribute("TrueUsage");
-  // String falseUsage = element.getAttribute("FalseUsage");
-  // String desc = element.getElementsByTagName("Description").item(0).getTextContent();
-  // return new Predicate(id, desc, trueUsage, falseUsage);
-  // }
-  //
-  // private Constraint conformanceStatement(Element element) {
-  // String id = element.getAttribute("ID");
-  // String desc = element.getElementsByTagName("Description").item(0).getTextContent();
-  // return new Constraint(id, desc);
-  // }
-
-  // private void addToMessage(String id, Constraint constraint) {
-  // ProfileElement fromMessage = findMessageChild(id);
-  // if (fromMessage == null)
-  // throw new RuntimeException("Cannot find in the message element with id=" + id);
-  // if (fromMessage.getConformanceStatements() == null)
-  // fromMessage.setConformanceStatements(new HashSet<Constraint>());
-  // fromMessage.getConformanceStatements().add(constraint);
-  // }
-  //
-  //
-  // private void addToMessage(String id, Predicate predicate) {
-  // ProfileElement fromMessage = findMessageChild(id);
-  // if (fromMessage == null)
-  // throw new RuntimeException("Cannot find in the message element with id=" + id);
-  // if (fromMessage.getPredicates() == null)
-  // fromMessage.setPredicates(new HashSet<Predicate>());
-  // fromMessage.getPredicates().add(predicate);
-  // }
-
-
-  // public void addPredicates(Element root, String type, Map<String, ProfileElement>... maps) {
-  // NodeList rootChildList = root.getElementsByTagName(type);
-  // if (rootChildList != null && rootChildList.getLength() > 0) {
-  // Element rootChildElement = (Element) rootChildList.item(0);
-  // NodeList children = rootChildElement.getElementsByTagName("ByID");
-  // if (children != null && children.getLength() > 0) {
-  // for (int i = 0; i < children.getLength(); i++) {
-  // Element child = (Element) children.item(i);
-  // String id = child.getAttribute("ID");
-  // ProfileElement element = findElementById(id, maps);
-  // if (element != null) {
-  // NodeList predicatesNodes = child.getElementsByTagName("Predicate");
-  // if (predicatesNodes != null && predicatesNodes.getLength() > 0) {
-  // for (int j = 0; j < predicatesNodes.getLength(); j++) {
-  // Element node = (Element) predicatesNodes.item(j);
-  // String target = node.getAttribute("Target");
-  // ProfileElement found = findElementByTarget(target, element);
-  // if (found != null) {
-  // Predicate predicate = predicate(node);
-  // found.getPredicates().add(predicate);
-  // addToMessage(found.getId(), predicate);
-  // }
-  // }
-  // }
-  // }
-  // }
-  // }
-  //
-  // children = rootChildElement.getElementsByTagName("ByName");
-  // if (children != null && children.getLength() > 0) {
-  // for (int i = 0; i < children.getLength(); i++) {
-  // Element child = (Element) children.item(i);
-  // String name = child.getAttribute("Name");
-  // ProfileElement element = findElementByName(name, maps);
-  // if (element != null) {
-  // NodeList predicatesNodes = child.getElementsByTagName("Predicate");
-  // if (predicatesNodes != null && predicatesNodes.getLength() > 0) {
-  // for (int j = 0; j < predicatesNodes.getLength(); j++) {
-  // Element node = (Element) predicatesNodes.item(j);
-  // String target = node.getAttribute("Target");
-  // ProfileElement found = findElementByTarget(target, element);
-  // if (found != null) {
-  // Predicate predicate = predicate(node);
-  // found.getPredicates().add(predicate);
-  // addToMessage(found.getId(), predicate);
-  // }
-  // }
-  // }
-  // }
-  // }
-  // }
-  // }
-  // }
-
-  // @SuppressWarnings("unchecked")
-  // public void addPredicates(Element root) {
-  // addPredicates(root, "Datatype", datatypesMap);
-  // addPredicates(root, "Segment", segmentsMap);
-  // addPredicates(root, "Group", groupsMap, messagesMap);
-  // }
-  //
-  // @SuppressWarnings("unchecked")
-  // public void addConformanceStatements(Element root) {
-  // addConformanceStatements(root, "Datatype", datatypesMap);
-  // addConformanceStatements(root, "Segment", segmentsMap);
-  // addConformanceStatements(root, "Group", groupsMap, messagesMap);
-  // }
-  //
-  // private ProfileElement findMessageChild(String id) {
-  // // ProfileElement el = messagesMap.values().iterator().next();
-  // // return findChild(id, el);
-  // return registry.get(id);
-  // }
-
-  // private ProfileElement findChild(String id, ProfileElement parent) {
-  // if (parent.getId().equals(id))
-  // return parent;
-  // java.util.List<ProfileElement> children = parent.getChildren();
-  // if (children == null || children.isEmpty())
-  // return null;
-  // for (ProfileElement child : children) {
-  // ProfileElement found = findChild(id, child);
-  // if (found != null) {
-  // return found;
-  // }
-  // }
-  // return null;
-  // }
-
-
-  // @SuppressWarnings("unchecked")
-  // public void addConformanceStatements(Element root, String type,
-  // Map<String, ProfileElement>... maps) {
-  // NodeList rootChildList = root.getElementsByTagName(type);
-  // if (rootChildList != null && rootChildList.getLength() > 0) {
-  // Element rootChildElement = (Element) rootChildList.item(0);
-  // NodeList children = rootChildElement.getElementsByTagName("ByID");
-  // if (children != null && children.getLength() > 0) {
-  // for (int i = 0; i < children.getLength(); i++) {
-  // Element child = (Element) children.item(i);
-  // String id = child.getAttribute("ID");
-  // ProfileElement element = findElementById(id, maps);
-  // if (element != null) {
-  // NodeList predicatesNodes = child.getElementsByTagName("Constraint");
-  // if (predicatesNodes != null && predicatesNodes.getLength() > 0) {
-  // for (int j = 0; j < predicatesNodes.getLength(); j++) {
-  // Element node = (Element) predicatesNodes.item(j);
-  // String target = node.getAttribute("Target");
-  // ProfileElement found = findElementByTarget(target, element);
-  // if (found != null) {
-  // Constraint confStatement = conformanceStatement(node);
-  // found.getConformanceStatements().add(confStatement);
-  // addToMessage(found.getId(), confStatement);
-  // }
-  // }
-  // }
-  // }
-  // }
-  // }
-  //
-  // children = rootChildElement.getElementsByTagName("ByName");
-  // if (children != null && children.getLength() > 0) {
-  // for (int i = 0; i < children.getLength(); i++) {
-  // Element child = (Element) children.item(i);
-  // String name = child.getAttribute("Name");
-  // ProfileElement element = findElementByName(name, maps);
-  // if (element != null) {
-  // NodeList predicatesNodes = child.getElementsByTagName("Constraint");
-  // if (predicatesNodes != null && predicatesNodes.getLength() > 0) {
-  // for (int j = 0; j < predicatesNodes.getLength(); j++) {
-  // Element node = (Element) predicatesNodes.item(j);
-  // String target = node.getAttribute("Target");
-  // ProfileElement found = findElementByTarget(target, element);
-  // if (found != null) {
-  // Constraint confStatement = conformanceStatement(node);
-  // found.getConformanceStatements().add(confStatement);
-  // addToMessage(found.getId(), confStatement);
-  // }
-  // }
-  // }
-  // }
-  // }
-  // }
-  // }
-  //
-  // }
-
-
-  // public void addConstraints(String constraintXml) {
-  // try {
-  // if (constraintXml != null && !"".equals(constraintXml)) {
-  // DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-  // DocumentBuilder builder = factory.newDocumentBuilder();
-  // Document doc = builder.parse(IOUtils.toInputStream(constraintXml));
-  // Element context = (Element) doc.getElementsByTagName("ConformanceContext").item(0);
-  // NodeList predicatesList = context.getElementsByTagName("Predicates");
-  // if (predicatesList != null && predicatesList.getLength() > 0) {
-  // addPredicates((Element) predicatesList.item(0));
-  // }
-  //
-  // NodeList constraintsList = context.getElementsByTagName("Constraints");
-  // if (constraintsList != null && constraintsList.getLength() > 0) {
-  // addConformanceStatements((Element) constraintsList.item(0));
-  // }
-  // }
-  // } catch (ParserConfigurationException | SAXException | IOException e) {
-  // throw new RuntimeException(e);
-  // }
-  // }
 
 
   private ProfileElement findElement(java.util.List<Integer> positions, ProfileElement element) {
@@ -939,8 +645,8 @@ public abstract class EDIProfileParser extends ProfileParser {
     return null;
   }
 
-  private ArrayList<ConformanceStatement> findConformanceStatement(Context context, String id,
-                                                                   String name) {
+  private ArrayList<ConformanceStatement> findConformanceStatements(Context context, String id,
+                                                                    String name) {
     Set<ByNameOrByID> byNameOrByIDs = context.getByNameOrByIDs();
     ArrayList<ConformanceStatement> result = new ArrayList<ConformanceStatement>();
     for (ByNameOrByID byNameOrByID : byNameOrByIDs) {
@@ -950,12 +656,12 @@ public abstract class EDIProfileParser extends ProfileParser {
           for (ConformanceStatement c : byID.getConformanceStatements()) {
             result.add(c);
           }
-        } else if (byNameOrByID instanceof ByName) {
-          ByName byName = (ByName) byNameOrByID;
-          if (byName.getByName().equals(name)) {
-            for (ConformanceStatement c : byName.getConformanceStatements()) {
-              result.add(c);
-            }
+        }
+      } else if (byNameOrByID instanceof ByName) {
+        ByName byName = (ByName) byNameOrByID;
+        if (byName.getByName().equals(name)) {
+          for (ConformanceStatement c : byName.getConformanceStatements()) {
+            result.add(c);
           }
         }
       }
@@ -973,17 +679,18 @@ public abstract class EDIProfileParser extends ProfileParser {
           for (Predicate p : byID.getPredicates()) {
             result.add(p);
           }
-        } else if (byNameOrByID instanceof ByName) {
-          ByName byName = (ByName) byNameOrByID;
-          if (byName.getByName().equals(name)) {
-            for (Predicate p : byName.getPredicates()) {
-              result.add(p);
-            }
+        }
+      } else if (byNameOrByID instanceof ByName) {
+        ByName byName = (ByName) byNameOrByID;
+        if (byName.getByName().equals(name)) {
+          for (Predicate p : byName.getPredicates()) {
+            result.add(p);
           }
         }
       }
     }
     return result;
   }
+
 
 }
