@@ -135,16 +135,14 @@ public abstract class EDIProfileParser extends ProfileParser {
       // .getGroups(), model.getMessage().getId(), model.getMessage().getName()));
       // message.setPredicates(this.findPredicates(this.predicates.getGroups(), model.getMessage()
       // .getId(), model.getMessage().getName()));
-      logger.info("conformanceStatements.getMessages()"+this.conformanceStatements.getMessages());
-      logger.info("model.getMessage().getId()"+model.getMessage().getId());
-      logger.info("model.getMessage().getName()"+model.getMessage().getName());
 
+      logger.info("conformanceStatements "+conformanceStatements);
       message.setConformanceStatements(this.findConformanceStatements(this.conformanceStatements
               .getMessages(), model.getMessage().getId(), model.getMessage().getName()));
-      if (this.predicates != null){
-        message.setPredicates(this.findPredicates(this.predicates.getMessages(), model.getMessage()
+
+      logger.info("predicates "+predicates);
+      message.setPredicates(this.findPredicates(this.predicates.getMessages(), model.getMessage()
                 .getId(), model.getMessage().getName()));
-      }
 
       scala.collection.immutable.List<SegRefOrGroup> children = m.structure();
       if (children != null && !children.isEmpty()) {
