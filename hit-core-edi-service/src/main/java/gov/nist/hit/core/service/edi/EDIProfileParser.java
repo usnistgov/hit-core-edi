@@ -104,9 +104,8 @@ public abstract class EDIProfileParser extends ProfileParser {
                 + Message.class.getCanonicalName());
       }
       String c1Xml = constraints != null && constraints.length > 0 ? constraints[0] : null;
-      logger.info("c1Xml "+c1Xml);
       String c2Xml = constraints != null && constraints.length > 1 ? constraints[1] : null;
-      logger.info("c2Xml "+c2Xml);
+      
       Message m = (Message) conformanceProfile;
 
       this.segmentsMap = new LinkedHashMap<String, ProfileElement>();
@@ -136,11 +135,10 @@ public abstract class EDIProfileParser extends ProfileParser {
       // message.setPredicates(this.findPredicates(this.predicates.getGroups(), model.getMessage()
       // .getId(), model.getMessage().getName()));
 
-      logger.info("conformanceStatements "+conformanceStatements);
       message.setConformanceStatements(this.findConformanceStatements(this.conformanceStatements
               .getMessages(), model.getMessage().getId(), model.getMessage().getName()));
 
-      logger.info("predicates "+predicates);
+      
       message.setPredicates(this.findPredicates(this.predicates.getMessages(), model.getMessage()
                 .getId(), model.getMessage().getName()));
 
