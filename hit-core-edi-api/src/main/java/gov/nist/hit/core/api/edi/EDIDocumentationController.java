@@ -64,7 +64,7 @@ public class EDIDocumentationController {
       response.setHeader("Content-disposition", "attachment;filename=" + targetTitle);
       FileCopyUtils.copy(content, response.getOutputStream());
     } catch (Exception e) {
-      logger.debug(e.getMessage(), e);
+      logger.error(e.getMessage(), e);
       throw new DownloadDocumentException("Failed to download the message");
     }
     return null;
@@ -80,7 +80,7 @@ public class EDIDocumentationController {
       logger.info("Downloading Profile of element with id " + targetId);
       InputStream content = null;
       EDITestContext testContext = testContextRepository.findOne(targetId);
-      String profile = testContext.getConformanceProfile().getXml();
+      String profile = testContext.getConformanceProfile().getJson();
       content = IOUtils.toInputStream(profile, "UTF-8");
       response.setContentType("application/xml");
       targetTitle = targetTitle + "-" + "Profile.json";
@@ -88,13 +88,13 @@ public class EDIDocumentationController {
       response.setHeader("Content-disposition", "attachment;filename=" + targetTitle);
       FileCopyUtils.copy(content, response.getOutputStream());
     } catch (Exception e) {
-      logger.debug(e.getMessage(), e);
+      logger.error(e.getMessage(), e);
       throw new DownloadDocumentException("Failed to download the conformance profile");
     }
     return null;
   }
 
-  @RequestMapping(value = "/valueset", method = RequestMethod.POST,
+  @RequestMapping(value = "/valuesetlib", method = RequestMethod.POST,
       consumes = "application/x-www-form-urlencoded; charset=UTF-8")
   public String downloadValueSetlib(@RequestParam("targetId") Long targetId,
       @RequestParam("targetType") String targetType,
@@ -104,7 +104,7 @@ public class EDIDocumentationController {
       logger.info("Downloading ValueSetLibrary of element with id " + targetId);
       InputStream content = null;
       EDITestContext testContext = testContextRepository.findOne(targetId);
-      String profile = testContext.getVocabularyLibrary().getXml();
+      String profile = testContext.getVocabularyLibrary().getJson();
       content = IOUtils.toInputStream(profile, "UTF-8");
       response.setContentType("application/xml");
       targetTitle = targetTitle + "-" + "ValueSetLibrary.json";
@@ -112,7 +112,7 @@ public class EDIDocumentationController {
       response.setHeader("Content-disposition", "attachment;filename=" + targetTitle);
       FileCopyUtils.copy(content, response.getOutputStream());
     } catch (Exception e) {
-      logger.debug(e.getMessage(), e);
+      logger.error(e.getMessage(), e);
       throw new DownloadDocumentException("Failed to download the ValueSetLibrary");
     }
     return null;

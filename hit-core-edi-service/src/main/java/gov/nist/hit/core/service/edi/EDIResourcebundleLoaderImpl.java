@@ -65,61 +65,68 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
       EDITestContext context = testContextRepository.findOne(c.getId());
       doc.setExMsgPresent(context.getMessage() != null && context.getMessage().getContent() != null);
       doc.setXmlConfProfilePresent(context.getConformanceProfile() != null
-          && context.getConformanceProfile().getXml() != null);
+          && context.getConformanceProfile().getJson() != null);
       doc.setXmlValueSetLibraryPresent(context.getVocabularyLibrary() != null
-          && context.getVocabularyLibrary().getXml() != null);
+          && context.getVocabularyLibrary().getJson() != null);
     }
     return doc;
   }
 
 
 
-  @Override
-  public TestContext testContext(String path, JsonNode formatObj, TestingStage stage)
-      throws IOException {
-    // for backward compatibility
+    @Override
+    public TestContext testContext(String path, JsonNode formatObj, TestingStage stage)
+            throws IOException {
+        // for backward compatibility
         if (formatObj.findValue(FORMAT) == null){
-          return null;
+            return null;
         } else {
-      formatObj = formatObj.findValue(FORMAT);
-      EDITestContext testContext = new EDITestContext();
-      testContext.setFormat(FORMAT);
-      testContext.setStage(stage);
-      JsonNode messageId = formatObj.findValue("messageId");
-      JsonNode constraintId = formatObj.findValue("constraintId");
-      JsonNode valueSetLibraryId = formatObj.findValue("valueSetLibraryId");
-      if (valueSetLibraryId != null && !"".equals(valueSetLibraryId.getTextValue())) {
-        testContext.setVocabularyLibrary((getVocabularyLibrary(valueSetLibraryId.getTextValue())));
-      }
-      if (constraintId != null && !"".equals(constraintId.getTextValue())) {
-        testContext.setConstraints(getConstraints(constraintId.getTextValue()));
-      }
-      testContext.setAddditionalConstraints(additionalConstraints(path + CONSTRAINTS_FILE_PATTERN));
+            formatObj = formatObj.findValue(FORMAT);
 
-      testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.txt"))));
+            JsonNode messageId = formatObj.findValue("messageId");
+            JsonNode constraintId = formatObj.findValue("constraintId");
+            JsonNode valueSetLibraryId = formatObj.findValue("valueSetLibraryId");
 
-      // TODO: Ask Woo to change Message.text to Message.txt
-      if (testContext.getMessage() == null) {
-        testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.text"))));
-      }
-      if (messageId != null) {
-        try {
-          ConformanceProfile conformanceProfile = new ConformanceProfile();
-          IntegrationProfile integrationProfile = getIntegrationProfile(messageId.getTextValue());
-          conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), messageId
-              .getTextValue(), testContext.getConstraints() != null ? testContext.getConstraints()
-              .getXml() : null, testContext.getAddditionalConstraints() != null ? testContext
-              .getAddditionalConstraints().getXml() : null));
-          conformanceProfile.setIntegrationProfile(integrationProfile);
-          conformanceProfile.setSourceId(messageId.getTextValue());
-          testContext.setConformanceProfile(conformanceProfile);
-        } catch (ProfileParserException e) {
-          throw new RuntimeException("Failed to parse integrationProfile at " + path);
+            if (messageId != null) {
+
+                EDITestContext testContext = new EDITestContext();
+                testContext.setFormat(FORMAT);
+                testContext.setStage(stage);
+
+                if (valueSetLibraryId != null && !"".equals(valueSetLibraryId.getTextValue())) {
+                    testContext.setVocabularyLibrary((getVocabularyLibrary(valueSetLibraryId.getTextValue())));
+                }
+                if (constraintId != null && !"".equals(constraintId.getTextValue())) {
+                    testContext.setConstraints(getConstraints(constraintId.getTextValue()));
+                }
+                testContext.setAddditionalConstraints(additionalConstraints(path + CONSTRAINTS_FILE_PATTERN));
+
+                testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.txt"))));
+
+                // TODO: Ask Woo to change Message.text to Message.txt
+                if (testContext.getMessage() == null) {
+                    testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.text"))));
+                }
+
+                try {
+                    ConformanceProfile conformanceProfile = new ConformanceProfile();
+                    IntegrationProfile integrationProfile = getIntegrationProfile(messageId.getTextValue());
+                    conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), messageId
+                            .getTextValue(), testContext.getConstraints() != null ? testContext.getConstraints()
+                            .getXml() : null, testContext.getAddditionalConstraints() != null ? testContext
+                            .getAddditionalConstraints().getXml() : null));
+                    conformanceProfile.setIntegrationProfile(integrationProfile);
+                    conformanceProfile.setSourceId(messageId.getTextValue());
+                    testContext.setConformanceProfile(conformanceProfile);
+                } catch (ProfileParserException e) {
+                    logger.info("ERROR",e);
+                    throw new RuntimeException("Failed to parse integrationProfile at " + path);
+                }
+                return testContext;
+            }
+            return null;
         }
-      }
-      return testContext;
     }
-  }
 
   @Override
   public ProfileModel parseProfile(String integrationProfileXml, String conformanceProfileId,
