@@ -12,6 +12,8 @@
 package gov.nist.hit.core.service.edi;
 
 
+import gov.nist.healthcare.unified.converters.XMLConverter;
+import gov.nist.healthcare.unified.model.EnhancedReport;
 import gov.nist.hit.core.service.ValidationReportGenerator;
 import gov.nist.hit.core.service.exception.ValidationReportException;
 
@@ -107,7 +109,9 @@ public abstract class EDIValidationReportGenerator extends ValidationReportGener
    */
   @Override
   public String toXML(String json) throws Exception {
-    return "";
+    EnhancedReport report = EnhancedReport.from("json", json);
+    String xml = new XMLConverter().convert(report);
+    return xml;
   }
 
 }
