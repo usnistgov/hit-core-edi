@@ -47,7 +47,7 @@
 		<dependency>
     		<groupId>gov.nist</groupId>
     		<artifactId>edi-validation</artifactId>
-    		<version>1.0.0-beta-12.1-N-SNAPSHOT</version>
+    		<version>1.0.0-beta-12.2-N-SNAPSHOT</version>
     	</dependency>
 
 	</dependencies>
