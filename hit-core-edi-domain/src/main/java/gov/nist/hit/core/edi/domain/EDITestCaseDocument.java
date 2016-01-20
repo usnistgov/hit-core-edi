@@ -13,6 +13,7 @@ public class EDITestCaseDocument extends TestCaseDocument implements Serializabl
   protected boolean exMsgPresent;
   protected boolean xmlConfProfilePresent;
   protected boolean xmlValueSetLibraryPresent;
+  protected boolean xmlConstraintsPresent;
 
 
 
@@ -46,6 +47,12 @@ public class EDITestCaseDocument extends TestCaseDocument implements Serializabl
     this.xmlValueSetLibraryPresent = xmlValueSetLibraryPresent;
   }
 
+  public boolean isXmlConstraintsPresent() {
+    return xmlConstraintsPresent;
+  }
 
+  public void setXmlConstraintsPresent(boolean xmlConstraintsPresent) {
+    this.xmlConstraintsPresent = xmlConstraintsPresent;
+  }
 
 }

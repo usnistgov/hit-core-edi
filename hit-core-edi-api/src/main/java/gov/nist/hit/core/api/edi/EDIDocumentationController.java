@@ -117,7 +117,7 @@ public class EDIDocumentationController {
       FileCopyUtils.copy(content, response.getOutputStream());
     } catch (Exception e) {
       logger.debug(e.getMessage(), e);
-      throw new DownloadDocumentException("Failed to download the conformance profile");
+      throw new DownloadDocumentException("Failed to download the constraints");
     }
     return null;
   }

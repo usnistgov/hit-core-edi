@@ -68,6 +68,7 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
           && context.getConformanceProfile().getJson() != null);
       doc.setXmlValueSetLibraryPresent(context.getVocabularyLibrary() != null
           && context.getVocabularyLibrary().getJson() != null);
+        doc.setXmlConstraintsPresent(context.getAddditionalConstraints() != null && context.getAddditionalConstraints().getXml() != null);
     }
     return doc;
   }
