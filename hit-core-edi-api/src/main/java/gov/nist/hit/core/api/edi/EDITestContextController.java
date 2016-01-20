@@ -12,34 +12,21 @@
 
 package gov.nist.hit.core.api.edi;
 
-import gov.nist.hit.core.api.SessionContext;
+import gov.nist.hit.core.api.TestContextController;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.edi.repo.EDITestContextRepository;
-import gov.nist.hit.core.service.MessageValidationResultService;
-import gov.nist.hit.core.service.TestStepService;
-import gov.nist.hit.core.service.UserService;
+import gov.nist.hit.core.service.*;
 import gov.nist.hit.core.service.edi.EDIMessageParser;
 import gov.nist.hit.core.service.edi.EDIMessageValidator;
+import gov.nist.hit.core.service.edi.EDIValidationReportConverter;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.service.exception.MessageValidationException;
 import gov.nist.hit.core.service.exception.TestCaseException;
-
-import java.util.List;
-
-import gov.nist.hit.core.service.exception.ValidationReportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author Harold Affo (NIST)
@@ -48,7 +35,7 @@ import javax.servlet.http.HttpSession;
 
 @RequestMapping("/edi/testcontext")
 @RestController
-public class EDITestContextController {
+public class EDITestContextController extends TestContextController{
 
   Logger logger = LoggerFactory.getLogger(EDITestContextController.class);
 
@@ -62,64 +49,26 @@ public class EDITestContextController {
   private EDIMessageParser messageParser;
 
   @Autowired
-  private UserService userService;
-
-  @Autowired
-  private TestStepService testStepService;
-
-  @Autowired
-  private MessageValidationResultService validationResultService;
+  private EDIValidationReportConverter ediValidationReportConverter;
 
 
-  @RequestMapping(value = "/{testContextId}")
-  public EDITestContext testContext(@PathVariable final Long testContextId) {
-    logger.info("Fetching testContext with id=" + testContextId);
-    EDITestContext testContext = testContextRepository.findOne(testContextId);
-    if (testContext == null) {
-      throw new TestCaseException("No test context available with id=" + testContextId);
-    }
-    return testContext;
+  @Override
+  public MessageValidator getMessageValidator() {
+    return messageValidator;
   }
 
-  @RequestMapping(value = "/{testContextId}/parseMessage", method = RequestMethod.POST)
-  public MessageModel parse(
-      @PathVariable final Long testContextId, @RequestBody final MessageParserCommand command)
-      throws MessageParserException {
-    logger.info("Parsing message");
-    EDITestContext testContext = testContext(testContextId);
-    return messageParser.parse(testContext, command);
+  @Override
+  public MessageParser getMessageParser() {
+    return messageParser;
   }
 
-
-  @RequestMapping(value = "/{testContextId}/validateMessage", method = RequestMethod.POST)
-  public MessageValidationResult validate(@PathVariable final Long testContextId,
-                                          @RequestBody final MessageValidationCommand command, HttpServletRequest request,
-                                          HttpServletResponse response, HttpSession session) throws MessageValidationException {
-    logger.info("Validating a message");
-    User user = null;
-    Long userId = SessionContext.getCurrentUserId(session);
-    if (userId == null || (user = userService.findOne(userId)) == null)
-      throw new ValidationReportException("Unknown user");
-
-    TestStep testStep = testStepService.findOneByTestContext(testContextId);
-    if (testStep == null)
-      throw new ValidationReportException("No Teststep found");
-
-    MessageValidationResult result = messageValidator.validate(testContext(testContextId), command);
-    MessageValidationResult dbResult = null;
-    dbResult = validationResultService.findOneByTestStepAndUser(testStep.getId(), user.getId());
-    if (dbResult != null) {
-      dbResult.setHtml(result.getHtml());
-      dbResult.setJson(result.getJson());
-    } else {
-      dbResult = result;
-      dbResult.setTestStep(testStep);
-      dbResult.setUser(user);
-    }
-    validationResultService.save(dbResult);
-    return dbResult;
+  @Override
+  public TestContext getTestContext(Long aLong) {
+    return testContextRepository.findOne(aLong);
   }
 
-
-
+  @Override
+  public ValidationReportConverter getValidatioReportConverter() {
+    return ediValidationReportConverter;
+  }
 }

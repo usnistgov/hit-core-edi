@@ -12,14 +12,13 @@
 
 package gov.nist.hit.core.api.edi;
 
-import gov.nist.hit.core.api.TestContextController;
-import gov.nist.hit.core.domain.*;
+import gov.nist.hit.core.domain.MessageModel;
+import gov.nist.hit.core.domain.MessageParserCommand;
+import gov.nist.hit.core.domain.MessageValidationCommand;
+import gov.nist.hit.core.domain.MessageValidationResult;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.edi.repo.EDITestContextRepository;
 import gov.nist.hit.core.repo.TestContextRepository;
-import gov.nist.hit.core.service.MessageParser;
-import gov.nist.hit.core.service.MessageValidator;
-import gov.nist.hit.core.service.ValidationReportConverter;
 import gov.nist.hit.core.service.edi.EDIMessageParser;
 import gov.nist.hit.core.service.edi.EDIMessageValidator;
 import gov.nist.hit.core.service.exception.MessageParserException;
@@ -44,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RequestMapping("/edi/transport/rest")
 @RestController
-public class EDITransportRESTController extends TestContextController {
+public class EDITransportRESTController {
 
   Logger logger = LoggerFactory.getLogger(EDITransportRESTController.class);
 
@@ -56,26 +55,6 @@ public class EDITransportRESTController extends TestContextController {
 
   @Autowired
   protected EDIMessageValidator messageValidator;
-
-  @Override
-  public MessageValidator getMessageValidator() {
-    return null;
-  }
-
-  @Override
-  public MessageParser getMessageParser() {
-    return null;
-  }
-
-  @Override
-  public TestContext getTestContext(Long aLong) {
-    return null;
-  }
-
-  @Override
-  public ValidationReportConverter getValidatioReportConverter() {
-    return null;
-  }
 
   @RequestMapping(value = "/initUser")
   public EDITestContext testContext(@PathVariable final Long testContextId) {
@@ -98,8 +77,14 @@ public class EDITransportRESTController extends TestContextController {
 
   @RequestMapping(value = "/{testContextId}/validateMessage", method = RequestMethod.POST)
   public MessageValidationResult validate(@PathVariable final Long testContextId,
-                                          @RequestBody final MessageValidationCommand command) throws MessageValidationException {
-    return messageValidator.validate(testContext(testContextId), command);
+      @RequestBody final MessageValidationCommand command) throws MessageValidationException {
+    try {
+      return messageValidator.validate(testContext(testContextId), command);
+    } catch (MessageValidationException e) {
+      throw new MessageValidationException(e.getMessage());
+    } catch (Exception e) {
+      throw new MessageValidationException(e.getMessage());
+    }
   }
 
 
