@@ -34,6 +34,8 @@ import java.io.IOException;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,7 +70,9 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
           && context.getConformanceProfile().getJson() != null);
       doc.setXmlValueSetLibraryPresent(context.getVocabularyLibrary() != null
           && context.getVocabularyLibrary().getJson() != null);
-        doc.setXmlConstraintsPresent(context.getAddditionalConstraints() != null && context.getAddditionalConstraints().getXml() != null);
+        doc.setXmlConstraintPresent(context.getAddditionalConstraints() != null && context.getAddditionalConstraints().getXml() != null);
+        ObjectMapper mapper = new ObjectMapper();
+        logger.info("TestCaseDocument : "+ mapper.writeValueAsString(doc));
     }
     return doc;
   }
