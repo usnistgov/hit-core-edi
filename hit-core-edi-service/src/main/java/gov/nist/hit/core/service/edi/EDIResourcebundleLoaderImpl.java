@@ -31,11 +31,10 @@ import gov.nist.hit.core.service.util.FileUtil;
 
 import java.io.IOException;
 
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.json.JSONObject;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,11 +97,11 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
                 testContext.setFormat(FORMAT);
                 testContext.setStage(stage);
 
-                if (valueSetLibraryId != null && !"".equals(valueSetLibraryId.getTextValue())) {
-                    testContext.setVocabularyLibrary((getVocabularyLibrary(valueSetLibraryId.getTextValue())));
+                if (valueSetLibraryId != null && !"".equals(valueSetLibraryId.textValue())) {
+                    testContext.setVocabularyLibrary((getVocabularyLibrary(valueSetLibraryId.textValue())));
                 }
-                if (constraintId != null && !"".equals(constraintId.getTextValue())) {
-                    testContext.setConstraints(getConstraints(constraintId.getTextValue()));
+                if (constraintId != null && !"".equals(constraintId.textValue())) {
+                    testContext.setConstraints(getConstraints(constraintId.textValue()));
                 }
                 testContext.setAddditionalConstraints(additionalConstraints(path + CONSTRAINTS_FILE_PATTERN));
 
@@ -115,13 +114,13 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
                 try {
                     ConformanceProfile conformanceProfile = new ConformanceProfile();
-                    IntegrationProfile integrationProfile = getIntegrationProfile(messageId.getTextValue());
+                    IntegrationProfile integrationProfile = getIntegrationProfile(messageId.textValue());
                     conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), messageId
-                            .getTextValue(), testContext.getConstraints() != null ? testContext.getConstraints()
+                            .textValue(), testContext.getConstraints() != null ? testContext.getConstraints()
                             .getXml() : null, testContext.getAddditionalConstraints() != null ? testContext
                             .getAddditionalConstraints().getXml() : null));
                     conformanceProfile.setIntegrationProfile(integrationProfile);
-                    conformanceProfile.setSourceId(messageId.getTextValue());
+                    conformanceProfile.setSourceId(messageId.textValue());
                     testContext.setConformanceProfile(conformanceProfile);
                 } catch (ProfileParserException e) {
                     logger.info("ERROR",e);
