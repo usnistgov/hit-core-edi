@@ -16,7 +16,7 @@
 
 	<properties>
 		<core.version>1.0.48</core.version>
-        <hit-core.version>1.0.5-SNAPSHOT</hit-core.version>
+        <hit-core.version>1.0.6-SNAPSHOT</hit-core.version>
 	</properties>
 
 	<dependencies>
