@@ -28,6 +28,8 @@ public class EDITestContext extends TestContext implements Serializable {
   @JsonProperty(value = "profile")
   protected ConformanceProfile conformanceProfile;
 
+  protected String type;
+
   @ManyToOne
   protected VocabularyLibrary vocabularyLibrary;
 
@@ -77,6 +79,11 @@ public class EDITestContext extends TestContext implements Serializable {
     this.addditionalConstraints = addditionalConstraints;
   }
 
+  public String getType() {
+    return type;
+  }
 
-
+  public void setType(String type) {
+    this.type = type;
+  }
 }

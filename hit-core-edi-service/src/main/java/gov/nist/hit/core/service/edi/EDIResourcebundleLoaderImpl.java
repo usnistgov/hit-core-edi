@@ -87,16 +87,18 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
         } else {
             formatObj = formatObj.findValue(FORMAT);
 
-            JsonNode messageId = formatObj.findValue("messageId");
+            JsonNode type = formatObj.findValue("messageId");
             JsonNode constraintId = formatObj.findValue("constraintId");
             JsonNode valueSetLibraryId = formatObj.findValue("valueSetLibraryId");
 
-            if (messageId != null) {
+            if (type != null) {
 
                 EDITestContext testContext = new EDITestContext();
                 testContext.setFormat(FORMAT);
                 testContext.setStage(stage);
-
+                if(type!=null) {
+                    testContext.setType(type.textValue());
+                }
                 if (valueSetLibraryId != null && !"".equals(valueSetLibraryId.textValue())) {
                     testContext.setVocabularyLibrary((getVocabularyLibrary(valueSetLibraryId.textValue())));
                 }
@@ -114,13 +116,13 @@ public class EDIResourcebundleLoaderImpl extends ResourcebundleLoader {
 
                 try {
                     ConformanceProfile conformanceProfile = new ConformanceProfile();
-                    IntegrationProfile integrationProfile = getIntegrationProfile(messageId.textValue());
-                    conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), messageId
+                    IntegrationProfile integrationProfile = getIntegrationProfile(type.textValue());
+                    conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), type
                             .textValue(), testContext.getConstraints() != null ? testContext.getConstraints()
                             .getXml() : null, testContext.getAddditionalConstraints() != null ? testContext
                             .getAddditionalConstraints().getXml() : null));
                     conformanceProfile.setIntegrationProfile(integrationProfile);
-                    conformanceProfile.setSourceId(messageId.textValue());
+                    conformanceProfile.setSourceId(type.textValue());
                     testContext.setConformanceProfile(conformanceProfile);
                 } catch (ProfileParserException e) {
                     logger.info("ERROR",e);
