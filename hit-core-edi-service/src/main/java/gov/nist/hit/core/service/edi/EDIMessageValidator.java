@@ -15,6 +15,7 @@ import gov.nist.healthcare.unified.exceptions.ConversionException;
 import gov.nist.healthcare.unified.exceptions.NotFoundException;
 import gov.nist.healthcare.unified.model.*;
 import gov.nist.healthcare.unified.model.Collection;
+import gov.nist.hit.ValidationLogUtil;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 
 import gov.nist.healthcare.unified.enums.Context;
@@ -47,104 +48,29 @@ public abstract class EDIMessageValidator implements MessageValidator {
   @Override
   public MessageValidationResult validate(TestContext testContext, MessageValidationCommand command)
           throws MessageValidationException {
-    try {
       EnhancedReport report = generateReport(testContext, command);
-      if (report != null) {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-        Detections detections = report.getDetections();
-        boolean validationSuccess = true;
-        StringBuilder validationResult = new StringBuilder();
-
-        for (Classification classification : detections.classes()) {
-          if (classification.getName().equals("Affirmative")) {
-
-          } else if (classification.getName().equals("Warning")) {
-            int warningCount = classification.keys().size();
-            validationResult.append(" - ");
-            validationResult.append(warningCount);
-            validationResult.append(" warning");
-            if (warningCount > 1) {
-              validationResult.append("s");
-            }
-          } else if (classification.getName().equals("Error")) {
-            validationSuccess = false;
-            int errorCount = classification.keys().size();
-            if (errorCount > 0) {
-              HashMap<String, Integer> segmentCount = new HashMap<>();
-              validationResult.append(" - ");
-              validationResult.append(errorCount);
-              validationResult.append(" error");
-              if (errorCount > 1) {
-                validationResult.append("s");
-              }
-              for (String key : classification.keys()) {
-                Collection collection = classification.getArray(key);
-                collection.getName();
-                for (int i = 0; i < collection.size(); i++) {
-                  Section section = collection.getObject(i);
-                  String path = section.getString("path");
-                  if (path != null && !"".equals(path)) {
-                    path = path.split("\\[")[0];
-                    int segmentErrorCount = 1;
-                    if (segmentCount.containsKey(path)) {
-                      segmentErrorCount = segmentCount.get(path) + 1;
-                    }
-                    segmentCount.put(path, segmentErrorCount);
-                  }
-                }
-              }
-              boolean isFirst = true;
-              if(segmentCount.size()>0) {
-                validationResult.append(" [");
-                for (String path : segmentCount.keySet()) {
-                  if (!isFirst) {
-                    validationResult.append(", ");
-                  }
-                  validationResult.append(path);
-                  validationResult.append(" (");
-                  validationResult.append(segmentCount.get(path));
-                  validationResult.append(" error");
-                  if (segmentCount.get(path) > 1) {
-                    validationResult.append("s");
-                  }
-                  validationResult.append(")");
-                  isFirst = false;
-                }
-                validationResult.append("]");
-              }
-            }
-          }
-        }
-        StringBuilder validationLog = new StringBuilder();
-        validationLog.append(simpleDateFormat.format(new Date()));
-        validationLog.append(" [Validation] EDI - ");
-        EDITestContext ediTestContext = (EDITestContext)testContext;
-        if(ediTestContext.getType()!=null) {
-          validationLog.append(ediTestContext.getType());
-          validationLog.append(" - ");
-        }
-        if (validationSuccess)
-          validationLog.append("success");
-        else
-          validationLog.append("fail");
-        validationLog.append(validationResult.toString());
+      try {
+        String validationLog = ValidationLogUtil.generateValidationLog(testContext, report);
         statLog.info(validationLog.toString());
-        Map<String, String> nav = command.getNav();
-        if (nav != null && !nav.isEmpty()) {
-          report.setTestCase(nav.get("testPlan"), nav.get("testGroup"), nav.get("testCase"),
-                  nav.get("testStep"));
-        }
-        return new MessageValidationResult(report.to("json").toString(), report.render("iz-report", null));
+      } catch (ConversionException e1) {
+        e1.printStackTrace();
+      } catch (NotFoundException e1) {
+        e1.printStackTrace();
       }
+      Map<String, String> nav = command.getNav();
+      if (nav != null && !nav.isEmpty()) {
+        report.setTestCase(nav.get("testPlan"), nav.get("testGroup"), nav.get("testCase"),
+                nav.get("testStep"));
+      }
+    try {
 
-    throw new MessageValidationException();
-    } catch (MessageException e) {
-      throw new MessageValidationException(e.getLocalizedMessage());
-    } catch (RuntimeException e) {
-      throw new MessageValidationException(e.getLocalizedMessage());
+      return new MessageValidationResult(
+              report.to("json").toString(),
+              report.render("report", null));
     } catch (Exception e) {
-      throw new MessageValidationException(e.getLocalizedMessage());
+      e.printStackTrace();
     }
+    return null;
   }
 
 
