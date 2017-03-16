@@ -15,7 +15,7 @@ import gov.nist.healthcare.unified.exceptions.ConversionException;
 import gov.nist.healthcare.unified.exceptions.NotFoundException;
 import gov.nist.healthcare.unified.model.*;
 import gov.nist.healthcare.unified.model.Collection;
-import gov.nist.hit.ValidationLogUtil;
+import gov.nist.hit.core.service.util.ValidationLogUtil;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 
 import gov.nist.healthcare.unified.enums.Context;
@@ -49,19 +49,13 @@ public abstract class EDIMessageValidator implements MessageValidator {
   public MessageValidationResult validate(TestContext testContext, MessageValidationCommand command)
           throws MessageValidationException {
       EnhancedReport report = generateReport(testContext, command);
-      try {
-        String validationLog = ValidationLogUtil.generateValidationLog(testContext, report);
-        statLog.info(validationLog.toString());
-      } catch (ConversionException e1) {
-        e1.printStackTrace();
-      } catch (NotFoundException e1) {
-        e1.printStackTrace();
-      }
       Map<String, String> nav = command.getNav();
       if (nav != null && !nav.isEmpty()) {
         report.setTestCase(nav.get("testPlan"), nav.get("testGroup"), nav.get("testCase"),
                 nav.get("testStep"));
       }
+      String validationLog = ValidationLogUtil.generateValidationLog(testContext, report);
+      statLog.info(validationLog.toString());
     try {
 
       return new MessageValidationResult(
