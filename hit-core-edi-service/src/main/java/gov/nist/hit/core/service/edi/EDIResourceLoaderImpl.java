@@ -237,7 +237,7 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
 
 
     @Override
-    public TestContext testContext(String path, JsonNode formatObj, TestingStage stage)
+    public TestContext testContext(String path, JsonNode formatObj, TestingStage stage, TestStep testStep)
             throws IOException {
         // for backward compatibility
         if (formatObj.findValue(FORMAT) == null){
@@ -252,6 +252,7 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
             if (type != null) {
 
                 EDITestContext testContext = new EDITestContext();
+                testContext.setTestStep(testStep);
                 testContext.setFormat(FORMAT);
                 testContext.setStage(stage);
                 if(type!=null) {

@@ -53,7 +53,7 @@
 		<dependency>
     		<groupId>gov.nist</groupId>
     		<artifactId>edi-validation</artifactId>
-    		<version>1.1.5-N</version>
+    		<version>1.1.15-N</version>
     	</dependency>
 
 	</dependencies>
