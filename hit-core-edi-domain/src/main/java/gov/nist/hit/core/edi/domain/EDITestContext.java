@@ -38,7 +38,7 @@ public class EDITestContext extends TestContext implements Serializable {
 
   @JsonIgnore
   @OneToOne(cascade = CascadeType.ALL)
-  @JoinColumn(unique = true, nullable = true, insertable = true, updatable = true)
+  @JoinColumn(nullable = true, insertable = true, updatable = true)
   protected Constraints addditionalConstraints;
 
 
@@ -77,6 +77,11 @@ public class EDITestContext extends TestContext implements Serializable {
     this.addditionalConstraints = addditionalConstraints;
   }
 
+  public String getType() {
+    return type;
+  }
 
-
+  public void setType(String type) {
+    this.type = type;
+  }
 }

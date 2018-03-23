@@ -11,55 +11,67 @@
  */
 package gov.nist.hit.core.service.edi;
 
-import gov.nist.hit.core.edi.domain.EDITestContext;
-
 import gov.nist.healthcare.unified.enums.Context;
 import gov.nist.healthcare.unified.model.EnhancedReport;
 import gov.nist.healthcare.unified.proxy.ValidationProxy;
 import gov.nist.hit.core.domain.MessageValidationCommand;
 import gov.nist.hit.core.domain.MessageValidationResult;
 import gov.nist.hit.core.domain.TestContext;
-
+import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.service.MessageValidator;
 import gov.nist.hit.core.service.exception.MessageException;
 import gov.nist.hit.core.service.exception.MessageValidationException;
+import gov.nist.hit.core.service.util.ValidationLogUtil;
 import hl7.v2.validation.content.ConformanceContext;
 import hl7.v2.validation.content.DefaultConformanceContext;
 import hl7.v2.validation.vs.ValueSetLibrary;
 import hl7.v2.validation.vs.ValueSetLibraryImpl;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.io.IOUtils;
-
 
 public abstract class EDIMessageValidator implements MessageValidator {
+
+  private static Log statLog = LogFactory.getLog("StatLog");
+
+  @Value("${app.organization.name}")
+  private String organizationName;
+
+  @Bean
+  public EDIMessageValidator ediMessageValidator() {
+    EDIMessageValidatorImpl validator = new EDIMessageValidatorImpl();
+    validator.setOrganizationName(organizationName);
+    return validator;
+  }
 
   @Override
   public MessageValidationResult validate(TestContext testContext, MessageValidationCommand command)
           throws MessageValidationException {
-    try {
       EnhancedReport report = generateReport(testContext, command);
-      if (report != null) {
-        Map<String, String> nav = command.getNav();
-        if (nav != null && !nav.isEmpty()) {
-          report.setTestCase(nav.get("testPlan"), nav.get("testGroup"), nav.get("testCase"),
-                  nav.get("testStep"));
-        }
-        return new MessageValidationResult(report.to("json").toString(), report.render("iz-report",
-                null));
+      Map<String, String> nav = command.getNav();
+      if (nav != null && !nav.isEmpty()) {
+        report.setTestCase(nav.get("testPlan"), nav.get("testGroup"), nav.get("testCase"),
+                nav.get("testStep"));
       }
-      throw new MessageValidationException();
-    } catch (MessageException e) {
-      throw new MessageValidationException(e.getLocalizedMessage());
-    } catch (RuntimeException e) {
-      throw new MessageValidationException(e.getLocalizedMessage());
+      String validationLog = ValidationLogUtil.generateValidationLog(testContext, report);
+      statLog.info(validationLog.toString());
+    try {
+
+      return new MessageValidationResult(
+              report.to("json").toString(),
+              report.render("report", null));
     } catch (Exception e) {
-      throw new MessageValidationException(e.getLocalizedMessage());
+      e.printStackTrace();
     }
+    return null;
   }
 
 
@@ -88,7 +100,7 @@ public abstract class EDIMessageValidator implements MessageValidator {
         ConformanceContext c = getConformanceContext(cStreams);
         ValueSetLibrary vsLib =
                 valueSets != null ? getValueSetLibrary(IOUtils.toInputStream(valueSets)) : null;
-        ValidationProxy vp = new ValidationProxy("NIST Validation Tool", "NIST");
+        ValidationProxy vp = new ValidationProxy(getValidationServiceName(), getProviderName());
         EnhancedReport report =
                 vp.validate(message, integrationProfileXml, c, vsLib, conformanceProfielId,
                         Context.valueOf(contextType));

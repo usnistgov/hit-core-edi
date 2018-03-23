@@ -12,12 +12,24 @@
 package gov.nist.hit.core.service.edi;
 
 
+import gov.nist.healthcare.unified.converters.XMLConverter;
+import gov.nist.healthcare.unified.model.EnhancedReport;
+import gov.nist.hit.core.service.ValidationReportConverter;
 
 /**
  * @author Harold Affo (NIST)
  */
 
-public class EDIValidationReportGeneratorImpl extends EDIValidationReportGenerator {
+public abstract class EDIValidationReportConverter implements ValidationReportConverter {
 
+  /**
+   * TODO: Implement the method
+   */
+  @Override
+  public String toXML(String json) throws Exception {
+    EnhancedReport report = EnhancedReport.from("json", json);
+    String xml = new XMLConverter().convert(report);
+    return xml;
+  }
 
 }

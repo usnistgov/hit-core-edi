@@ -16,38 +16,44 @@
 
 	<properties>
 		<core.version>1.0.48</core.version>
+        <hit-core.version>1.0.25-SNAPSHOT</hit-core.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>gov.nist.hit.core</groupId>
 			<artifactId>hit-core-domain</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>${hit-core.version}</version>
 		</dependency>
 		
 		<dependency>
 			<groupId>gov.nist.hit.core</groupId>
 			<artifactId>hit-core-service</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>${hit-core.version}</version>
 		</dependency>
-		
+
+		<dependency>
+			<groupId>gov.nist.hit.core</groupId>
+			<artifactId>hit-core-api</artifactId>
+			<version>${hit-core.version}</version>
+		</dependency>
 		
 		<dependency>
 			<groupId>gov.nist.hit.core</groupId>
 			<artifactId>hit-core-repo</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>${hit-core.version}</version>
 		</dependency>
 		
 		<dependency>
 			<groupId>gov.nist.hit.core</groupId>
 			<artifactId>hit-core-transport</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>${hit-core.version}</version>
 		</dependency>
 		
 		<dependency>
     		<groupId>gov.nist</groupId>
     		<artifactId>edi-validation</artifactId>
-    		<version>1.0.0-beta-12.1-N-SNAPSHOT</version>
+    		<version>1.1.18-N</version>
     	</dependency>
 
 	</dependencies>
