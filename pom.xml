@@ -16,7 +16,7 @@
 
 	<properties>
 		<core.version>1.0.48</core.version>
-        <hit-core.version>1.0.20-SNAPSHOT</hit-core.version>
+        <hit-core.version>1.0.25-SNAPSHOT</hit-core.version>
 	</properties>
 
 	<dependencies>
@@ -53,7 +53,7 @@
 		<dependency>
     		<groupId>gov.nist</groupId>
     		<artifactId>edi-validation</artifactId>
-    		<version>1.1.15-N</version>
+    		<version>1.1.18-N</version>
     	</dependency>
 
 	</dependencies>

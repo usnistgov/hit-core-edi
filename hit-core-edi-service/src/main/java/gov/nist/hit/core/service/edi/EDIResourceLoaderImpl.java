@@ -32,14 +32,16 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-public class EDIResourceLoaderImpl extends ResourceLoader {
+public class EDIResourceLoaderImpl extends EDIResourceLoader {
 
   static final Logger logger = LoggerFactory.getLogger(EDIResourceLoaderImpl.class);
   static final String FORMAT = "edi";
@@ -56,12 +58,12 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
 
   public EDIResourceLoaderImpl() {}
 
-    @Override public List<ResourceUploadStatus> addOrReplaceValueSet() throws IOException {
+    @Override public List<ResourceUploadStatus> addOrReplaceValueSet(String rootPath) throws IOException {
         System.out.println("AddOrReplace VS");
 
         List<Resource> resources;
         try {
-            resources = this.getApiResources("*.xml");
+            resources = this.getApiResources("*.xml",rootPath);
             if (resources == null || resources.isEmpty()) {
                 ResourceUploadStatus result = new ResourceUploadStatus();
                 result.setType(ResourceType.VALUESETLIBRARY);
@@ -109,12 +111,12 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
     }
 
     @Override
-    public List<ResourceUploadStatus> addOrReplaceConstraints() {
+    public List<ResourceUploadStatus> addOrReplaceConstraints(String rootPath) {
         System.out.println("AddOrReplace Constraints");
 
         List<Resource> resources;
         try {
-            resources = this.getApiResources("*.xml");
+            resources = this.getApiResources("*.xml",rootPath);
             if (resources == null || resources.isEmpty()) {
                 ResourceUploadStatus result = new ResourceUploadStatus();
                 result.setType(ResourceType.CONSTRAINTS);
@@ -163,12 +165,12 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
     }
 
     @Override
-    public List<ResourceUploadStatus> addOrReplaceIntegrationProfile() {
+    public List<ResourceUploadStatus> addOrReplaceIntegrationProfile(String rootPath) {
         System.out.println("AddOrReplace integration profile");
 
         List<Resource> resources;
         try {
-            resources = this.getApiResources("*.xml");
+            resources = this.getApiResources("*.xml",rootPath);
             if (resources == null || resources.isEmpty()) {
                 ResourceUploadStatus result = new ResourceUploadStatus();
                 result.setType(ResourceType.PROFILE);
@@ -237,7 +239,7 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
 
 
     @Override
-    public TestContext testContext(String path, JsonNode formatObj, TestingStage stage, TestStep testStep)
+    public TestContext testContext(String path, JsonNode formatObj, TestingStage stage, String rootPath)
             throws IOException {
         // for backward compatibility
         if (formatObj.findValue(FORMAT) == null){
@@ -252,7 +254,6 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
             if (type != null) {
 
                 EDITestContext testContext = new EDITestContext();
-                testContext.setTestStep(testStep);
                 testContext.setFormat(FORMAT);
                 testContext.setStage(stage);
                 if(type!=null) {
@@ -264,13 +265,20 @@ public class EDIResourceLoaderImpl extends ResourceLoader {
                 if (constraintId != null && !"".equals(constraintId.textValue())) {
                     testContext.setConstraints(getConstraints(constraintId.textValue()));
                 }
-                testContext.setAddditionalConstraints(additionalConstraints(path + CONSTRAINTS_FILE_PATTERN));
 
-                testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.txt"))));
+                Resource resource = this.getResource(path + CONSTRAINTS_FILE_PATTERN, rootPath);
+                if (resource != null) {
+                    String content = IOUtils.toString(resource.getInputStream());
+                    testContext.setAddditionalConstraints(additionalConstraints(content));
+
+                }
+
+
+                testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.txt",rootPath))));
 
                 // TODO: Ask Woo to change Message.text to Message.txt
                 if (testContext.getMessage() == null) {
-                    testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.text"))));
+                    testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.text",rootPath))));
                 }
 
                 try {
