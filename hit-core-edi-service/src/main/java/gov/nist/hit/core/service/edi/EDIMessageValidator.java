@@ -19,6 +19,7 @@ import gov.nist.hit.core.domain.MessageValidationResult;
 import gov.nist.hit.core.domain.TestContext;
 import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.service.MessageValidator;
+import gov.nist.hit.core.service.ValidationLogService;
 import gov.nist.hit.core.service.exception.MessageException;
 import gov.nist.hit.core.service.exception.MessageValidationException;
 import gov.nist.hit.core.service.util.ValidationLogUtil;
@@ -29,6 +30,7 @@ import hl7.v2.validation.vs.ValueSetLibraryImpl;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 
@@ -44,6 +46,9 @@ public abstract class EDIMessageValidator implements MessageValidator {
 
   @Value("${app.organization.name}")
   private String organizationName;
+
+  @Autowired
+  private ValidationLogService validationLogService;
 
   @Bean
   public EDIMessageValidator ediMessageValidator() {
@@ -61,8 +66,7 @@ public abstract class EDIMessageValidator implements MessageValidator {
         report.setTestCase(nav.get("testPlan"), nav.get("testGroup"), nav.get("testCase"),
                 nav.get("testStep"));
       }
-      String validationLog = ValidationLogUtil.generateValidationLog(testContext, report);
-      statLog.info(validationLog.toString());
+      validationLogService.generateAndSave(command.getUserId(), testContext, report);
     try {
 
       return new MessageValidationResult(
@@ -84,7 +88,7 @@ public abstract class EDIMessageValidator implements MessageValidator {
         String message = getMessageContent(command);
         String conformanceProfielId = v2TestContext.getConformanceProfile().getSourceId();
         String integrationProfileXml =
-                v2TestContext.getConformanceProfile().getIntegrationProfile().getXml();
+                v2TestContext.getConformanceProfile().getXml();
         String valueSets = v2TestContext.getVocabularyLibrary().getXml();
         String c1 = v2TestContext.getConstraints().getXml();
         String c2 =

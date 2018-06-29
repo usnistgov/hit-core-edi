@@ -40,6 +40,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 public class EDIResourceLoaderImpl extends EDIResourceLoader {
 
@@ -55,10 +57,13 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
   EDIProfileParser profileParser = new EDIProfileParserImpl();
   ValueSetLibrarySerializer valueSetLibrarySerializer = new ValueSetLibrarySerializerImpl();
 
+  private static final String PROFILE_EXT = "-PROFILE";
+
 
   public EDIResourceLoaderImpl() {}
 
-    @Override public List<ResourceUploadStatus> addOrReplaceValueSet(String rootPath) throws IOException {
+    @Override public List<ResourceUploadStatus> addOrReplaceValueSet(String rootPath, String domain,
+        TestScope scope, String username, boolean preloaded) throws IOException {
         System.out.println("AddOrReplace VS");
 
         List<Resource> resources;
@@ -86,7 +91,7 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
             result.setType(ResourceType.VALUESETLIBRARY);
             String content = FileUtil.getContent(resource);
             try {
-                VocabularyLibrary vocabLibrary = vocabLibrary(content);
+                VocabularyLibrary vocabLibrary = vocabLibrary(content, domain, scope, username, preloaded);
                 result.setId(vocabLibrary.getSourceId());
                 VocabularyLibrary exist = this.getVocabularyLibrary(vocabLibrary.getSourceId());
                 if (exist != null) {
@@ -111,7 +116,8 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
     }
 
     @Override
-    public List<ResourceUploadStatus> addOrReplaceConstraints(String rootPath) {
+    public List<ResourceUploadStatus> addOrReplaceConstraints(String rootPath, String domain,
+        TestScope scope, String username, boolean preloaded) {
         System.out.println("AddOrReplace Constraints");
 
         List<Resource> resources;
@@ -139,7 +145,7 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
             result.setType(ResourceType.CONSTRAINTS);
             String content = FileUtil.getContent(resource);
             try {
-                Constraints constraint = constraint(content);
+                Constraints constraint = constraint(content, domain, scope, username, preloaded);
                 result.setId(constraint.getSourceId());
                 Constraints exist = this.getConstraints(constraint.getSourceId());
                 if (exist != null) {
@@ -165,7 +171,8 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
     }
 
     @Override
-    public List<ResourceUploadStatus> addOrReplaceIntegrationProfile(String rootPath) {
+    public List<ResourceUploadStatus> addOrReplaceIntegrationProfile(String rootPath, String domain,
+        TestScope scope, String username, boolean preloaded) {
         System.out.println("AddOrReplace integration profile");
 
         List<Resource> resources;
@@ -192,7 +199,7 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
             result.setType(ResourceType.PROFILE);
             String content = FileUtil.getContent(resource);
             try {
-                IntegrationProfile integrationP = integrationProfile(content);
+                IntegrationProfile integrationP = integrationProfile(content, domain, scope, username, preloaded);
                 result.setId(integrationP.getSourceId());
                 IntegrationProfile exist = this.integrationProfileRepository
                     .findBySourceId(integrationP.getSourceId());
@@ -218,7 +225,6 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
 
     }
 
-
     @Override
   public TestCaseDocument generateTestCaseDocument(TestContext c) throws IOException {
     EDITestCaseDocument doc = new EDITestCaseDocument();
@@ -239,7 +245,8 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
 
 
     @Override
-    public TestContext testContext(String path, JsonNode formatObj, TestingStage stage, String rootPath)
+    public TestContext testContext(String path, JsonNode formatObj, TestingStage stage, String rootPath, String domain,
+        TestScope scope, String authorUsername, boolean preloaded)
             throws IOException {
         // for backward compatibility
         if (formatObj.findValue(FORMAT) == null){
@@ -247,17 +254,21 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
         } else {
             formatObj = formatObj.findValue(FORMAT);
 
-            JsonNode type = formatObj.findValue("messageId");
+            JsonNode messageId = formatObj.findValue("messageId");
             JsonNode constraintId = formatObj.findValue("constraintId");
             JsonNode valueSetLibraryId = formatObj.findValue("valueSetLibraryId");
 
-            if (type != null) {
+            if (messageId != null) {
 
                 EDITestContext testContext = new EDITestContext();
                 testContext.setFormat(FORMAT);
                 testContext.setStage(stage);
-                if(type!=null) {
-                    testContext.setType(type.textValue());
+                testContext.setDomain(domain);
+                testContext.setScope(scope);
+                testContext.setAuthorUsername(authorUsername);
+                testContext.setPreloaded(preloaded);
+                if(messageId!=null) {
+                    testContext.setType(messageId.textValue());
                 }
                 if (valueSetLibraryId != null && !"".equals(valueSetLibraryId.textValue())) {
                     testContext.setVocabularyLibrary((getVocabularyLibrary(valueSetLibraryId.textValue())));
@@ -269,27 +280,38 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
                 Resource resource = this.getResource(path + CONSTRAINTS_FILE_PATTERN, rootPath);
                 if (resource != null) {
                     String content = IOUtils.toString(resource.getInputStream());
-                    testContext.setAddditionalConstraints(additionalConstraints(content));
+                    testContext.setAddditionalConstraints(additionalConstraints(content, domain, scope, authorUsername, preloaded));
 
                 }
 
 
-                testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.txt",rootPath))));
+                testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.txt",rootPath)), domain, scope, authorUsername, preloaded));
 
                 // TODO: Ask Woo to change Message.text to Message.txt
                 if (testContext.getMessage() == null) {
-                    testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.text",rootPath))));
+                    testContext.setMessage(message(FileUtil.getContent(getResource(path + "Message.text",rootPath)), domain, scope, authorUsername, preloaded));
                 }
 
                 try {
                     ConformanceProfile conformanceProfile = new ConformanceProfile();
-                    IntegrationProfile integrationProfile = getIntegrationProfile(type.textValue());
-                    conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), type
-                            .textValue(), testContext.getConstraints() != null ? testContext.getConstraints()
-                            .getXml() : null, testContext.getAddditionalConstraints() != null ? testContext
-                            .getAddditionalConstraints().getXml() : null));
-                    conformanceProfile.setIntegrationProfile(integrationProfile);
-                    conformanceProfile.setSourceId(type.textValue());
+//                    IntegrationProfile integrationProfile = getIntegrationProfile(type.textValue()+PROFILE_EXT);
+//                    conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), type
+//                            .textValue(), testContext.getConstraints() != null ? testContext.getConstraints()
+//                            .getXml() : null, testContext.getAddditionalConstraints() != null ? testContext
+//                            .getAddditionalConstraints().getXml() : null));
+//                    conformanceProfile.setSourceId(type.textValue());
+                    IntegrationProfile integrationProfile = this.getIntegrationProfile(messageId.textValue());
+                    conformanceProfile.setJson(jsonConformanceProfile(integrationProfile.getXml(), messageId.textValue(),
+                        testContext.getConstraints() != null ? testContext.getConstraints().getXml() : null,
+                        testContext.getAddditionalConstraints() != null
+                            ? testContext.getAddditionalConstraints().getXml() : null));
+                    conformanceProfile
+                        .setXml(getConformanceProfileContent(integrationProfile.getXml(), messageId.textValue()));
+                    conformanceProfile.setSourceId(messageId.textValue());
+                    conformanceProfile.setDomain(domain);
+                    conformanceProfile.setScope(scope);
+                    conformanceProfile.setAuthorUsername(authorUsername);
+                    conformanceProfile.setPreloaded(preloaded);
                     testContext.setConformanceProfile(conformanceProfile);
                 } catch (ProfileParserException e) {
                     logger.info("ERROR",e);
@@ -301,6 +323,15 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
         }
     }
 
+    @Override
+    protected IntegrationProfile getIntegrationProfile(String messageId) throws IOException {
+        String sourceId = this.getProfilesMap().get(messageId);
+        if (sourceId != null) {
+            return this.integrationProfileRepository.findBySourceId(sourceId);
+        }
+        return null;
+    }
+
   @Override
   public ProfileModel parseProfile(String integrationProfileXml, String conformanceProfileId,
       String constraintsXml, String additionalConstraintsXml) throws ProfileParserException {
@@ -309,18 +340,22 @@ public class EDIResourceLoaderImpl extends EDIResourceLoader {
   }
 
   @Override
-  public VocabularyLibrary vocabLibrary(String content) throws JsonGenerationException,
+  public VocabularyLibrary vocabLibrary(String content, String domain, TestScope scope,
+      String authorUsername, boolean preloaded) throws JsonGenerationException,
       JsonMappingException, IOException {
-    Document doc = this.stringToDom(content);
-    VocabularyLibrary vocabLibrary = new VocabularyLibrary();
-    Element valueSetLibraryeElement = (Element) doc.getElementsByTagName("ValueSetLibrary").item(0);
-    vocabLibrary.setSourceId(valueSetLibraryeElement.getAttribute("ValueSetLibraryIdentifier"));
-    vocabLibrary.setName(valueSetLibraryeElement.getAttribute("Name"));
-    vocabLibrary.setDescription(valueSetLibraryeElement.getAttribute("Description"));
-    vocabLibrary.setXml(content);
-    vocabLibrary.setJson(obm.writeValueAsString(valueSetLibrarySerializer.toObject(content)));
-    vocabularyLibraryRepository.save(vocabLibrary);
-    return vocabLibrary;
+      Document doc = this.stringToDom(content);
+      VocabularyLibrary vocabLibrary = new VocabularyLibrary();
+      Element valueSetLibraryeElement = (Element) doc.getElementsByTagName("ValueSetLibrary").item(0);
+      vocabLibrary.setSourceId(valueSetLibraryeElement.getAttribute("ValueSetLibraryIdentifier"));
+      vocabLibrary.setName(valueSetLibraryeElement.getAttribute("Name"));
+      vocabLibrary.setDescription(valueSetLibraryeElement.getAttribute("Description"));
+      vocabLibrary.setXml(content);
+      vocabLibrary.setDomain(domain);
+      vocabLibrary.setScope(scope);
+      vocabLibrary.setAuthorUsername(authorUsername);
+      vocabLibrary.setPreloaded(preloaded);
+      vocabLibrary.setJson(obm.writeValueAsString(valueSetLibrarySerializer.toObject(content)));
+      return vocabLibrary;
   }
 
 
